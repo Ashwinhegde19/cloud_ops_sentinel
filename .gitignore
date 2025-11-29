@@ -68,3 +68,4 @@ flagged/
 # Misc
 *.bak
 *.tmp
+.gradio/
