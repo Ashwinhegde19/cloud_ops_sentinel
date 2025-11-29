@@ -65,7 +65,12 @@ flagged/
 # Modal
 .modal/
 
+# Hypothesis (property-based testing)
+.hypothesis/
+
 # Misc
 *.bak
 *.tmp
 .gradio/
+.encryption_key
+cloud_ops_sentinel.db

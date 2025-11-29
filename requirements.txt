@@ -13,5 +13,10 @@ langchain-core>=0.1.0
 # PDF generation
 fpdf2>=2.7.0
 
+# Authentication & Security
+sqlalchemy>=2.0.0
+bcrypt>=4.0.0
+cryptography>=41.0.0
+
 # Optional: Additional LLM providers
 # langchain-community>=0.0.0
