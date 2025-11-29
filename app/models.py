@@ -145,3 +145,81 @@ class ReportData(BaseModel):
     anomalies: List[AnomalyResult] = []
     cost_forecast: Optional[CostForecast] = None
     recommendations: List[str] = []
+
+
+# ============== AUTH & PLATFORM MANAGEMENT MODELS ==============
+
+
+class User(BaseModel):
+    """User model for authentication."""
+
+    id: str
+    username: str
+    password_hash: str
+    role: str  # "viewer", "operator", "admin"
+    email: Optional[str] = None
+    created_at: datetime
+    last_login: Optional[datetime] = None
+    is_active: bool = True
+
+
+class Session(BaseModel):
+    """Session model for authentication."""
+
+    token: str
+    user_id: str
+    created_at: datetime
+    expires_at: datetime
+    is_active: bool = True
+
+
+class Platform(BaseModel):
+    """Platform connection model."""
+
+    id: str
+    name: str
+    type: str  # "aws", "gcp", "azure", "custom"
+    encrypted_credentials: str
+    is_active: bool = True
+    last_tested: Optional[datetime] = None
+    connection_status: str = "unknown"  # "connected", "failed", "unknown"
+    created_at: datetime
+
+
+class PlatformConfig(BaseModel):
+    """Configuration for adding/updating a platform."""
+
+    name: str
+    type: str  # "aws", "gcp", "azure", "custom"
+    credentials: Dict[str, str]  # Plaintext credentials before encryption
+
+
+class ApiKey(BaseModel):
+    """API key model (internal with encrypted value)."""
+
+    id: str
+    name: str
+    service: str  # "sambanova", "modal", "hyperbolic", "blaxel", "huggingface"
+    encrypted_value: str
+    created_at: datetime
+    last_used: Optional[datetime] = None
+
+
+class ApiKeyInfo(BaseModel):
+    """API key info for display (masked value)."""
+
+    id: str
+    name: str
+    service: str
+    masked_value: str  # "****xxxx"
+    created_at: datetime
+
+
+class ConnectionResult(BaseModel):
+    """Result of platform connection test."""
+
+    platform_id: str
+    success: bool
+    message: str
+    latency_ms: Optional[float] = None
+    tested_at: datetime
