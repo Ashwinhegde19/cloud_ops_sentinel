@@ -1,0 +1,43 @@
+{
+  "mcpServers": {
+    "cloud-ops-sentinel": {
+      "command": "./venv/bin/python3",
+      "args": [
+        "app/mcp_server.py"
+      ],
+      "env": {
+        "PYTHONPATH": "."
+      },
+      "disabled": false,
+      "autoApprove": [
+        "list_idle_instances",
+        "get_billing_forecast",
+        "get_metrics",
+        "detect_anomaly",
+        "restart_service",
+        "summarize_infra"
+      ]
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-fetch"
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": [
+        "fetch"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@anthropic/context7-mcp"
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}

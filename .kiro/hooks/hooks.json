@@ -1,0 +1,59 @@
+{
+  "hooks": [
+    {
+      "id": "run-tests-on-save",
+      "name": "Run Tests on Python File Save",
+      "description": "Automatically run relevant tests when Python files are saved",
+      "trigger": {
+        "type": "onFileSave",
+        "pattern": "**/*.py"
+      },
+      "action": {
+        "type": "sendMessage",
+        "message": "A Python file was saved. Check if there are related tests that should be run to verify the changes."
+      },
+      "enabled": true
+    },
+    {
+      "id": "validate-models",
+      "name": "Validate Models on Change",
+      "description": "Validate Pydantic models when models.py is modified",
+      "trigger": {
+        "type": "onFileSave",
+        "pattern": "**/models.py"
+      },
+      "action": {
+        "type": "shellCommand",
+        "command": "source venv/bin/activate && python3 -c 'from app.models import *; print(\"Models validated successfully\")'"
+      },
+      "enabled": true
+    },
+    {
+      "id": "check-mcp-tools",
+      "name": "Verify MCP Tools",
+      "description": "Verify all 6 MCP tools are working when mcp_server.py changes",
+      "trigger": {
+        "type": "onFileSave",
+        "pattern": "**/mcp_server.py"
+      },
+      "action": {
+        "type": "sendMessage",
+        "message": "MCP server was modified. Verify all 6 tools (list_idle_instances, get_billing_forecast, get_metrics, detect_anomaly, restart_service, summarize_infra) are working correctly."
+      },
+      "enabled": true
+    },
+    {
+      "id": "smoke-test",
+      "name": "Run Smoke Test",
+      "description": "Manual hook to run comprehensive smoke test",
+      "trigger": {
+        "type": "manual"
+      },
+      "action": {
+        "type": "shellCommand",
+        "command": "source venv/bin/activate && python3 demo.py --all"
+      },
+      "enabled": true
+    }
+  ]
+}

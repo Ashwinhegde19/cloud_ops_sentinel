@@ -1,25 +1,25 @@
 # Implementation Plan
 
-- [ ] 1. Enhance Data Models
-  - [ ] 1.1 Update Instance model with idle_state and network_activity fields
+- [x] 1. Enhance Data Models
+  - [x] 1.1 Update Instance model with idle_state and network_activity fields
     - Add Optional fields to Instance class in app/models.py
     - _Requirements: 1.1, 1.2_
-  - [ ] 1.2 Update Service model with health_score field
+  - [x] 1.2 Update Service model with health_score field
     - Add health_score Optional field to Service class
     - _Requirements: 5.5_
-  - [ ] 1.3 Enhance MetricPoint with network_in and network_out fields
+  - [x] 1.3 Enhance MetricPoint with network_in and network_out fields
     - Add network metrics to MetricPoint class
     - _Requirements: 3.1_
-  - [ ] 1.4 Enhance AnomalyResult with anomaly_type, affected_services, recommended_action
+  - [x] 1.4 Enhance AnomalyResult with anomaly_type, affected_services, recommended_action
     - Add detailed anomaly fields to AnomalyResult class
     - _Requirements: 4.1, 4.4_
-  - [ ] 1.5 Enhance CostForecast with narrative, breakdown, risk_factors
+  - [x] 1.5 Enhance CostForecast with narrative, breakdown, risk_factors
     - Add forecast detail fields to CostForecast class
     - _Requirements: 2.1, 2.4, 2.5_
-  - [ ] 1.6 Add RestartResult model
+  - [x] 1.6 Add RestartResult model
     - Create new RestartResult class with restart_status, time_taken_ms, post_restart_health, via, timestamp
     - _Requirements: 5.1_
-  - [ ] 1.7 Add OpsReport and InfraSummary models
+  - [x] 1.7 Add OpsReport and InfraSummary models
     - Create OpsReport with infra_health, idle_waste_summary, anomaly_root_causes, cost_forecast_summary, recommended_actions
     - Create InfraSummary with total_instances, running_instances, idle_instances, error_instances, health_score
     - _Requirements: 6.1, 6.2_
@@ -27,19 +27,19 @@
     - **Property 2: Idle Instance Output Structure**
     - **Validates: Requirements 1.1**
 
-- [ ] 2. Enhance Infrastructure Simulation
-  - [ ] 2.1 Update generate_fake_infra() to include network_activity and idle_state
+- [x] 2. Enhance Infrastructure Simulation
+  - [x] 2.1 Update generate_fake_infra() to include network_activity and idle_state
     - Generate realistic network activity values
     - Pre-compute idle_state based on criteria
     - _Requirements: 1.2_
-  - [ ] 2.2 Update generate_fake_metrics() to include network_in and network_out
+  - [x] 2.2 Update generate_fake_metrics() to include network_in and network_out
     - Add network metrics to generated MetricPoints
     - _Requirements: 3.1_
-  - [ ] 2.3 Implement compute_infra_summary() function
+  - [x] 2.3 Implement compute_infra_summary() function
     - Calculate total_instances, running_instances, idle_instances, error_instances
     - Calculate health_score and total_daily_cost
     - _Requirements: 6.1_
-  - [ ] 2.4 Implement estimate_monthly_cost() with breakdown
+  - [x] 2.4 Implement estimate_monthly_cost() with breakdown
     - Calculate cost by service tier and region
     - Return breakdown dictionary
     - _Requirements: 2.4_
@@ -50,16 +50,16 @@
     - **Property 4: Metrics Time Series Length**
     - **Validates: Requirements 3.2**
 
-- [ ] 3. Checkpoint - Ensure all tests pass
+- [x] 3. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 4. Enhance Hyperbolic Client for Anomaly Detection
-  - [ ] 4.1 Update detect_anomaly_from_metrics() with threshold logic
+- [x] 4. Enhance Hyperbolic Client for Anomaly Detection
+  - [x] 4.1 Update detect_anomaly_from_metrics() with threshold logic
     - Implement latency > 500ms and error_rate > 0.1 detection
     - Set appropriate severity levels
     - Add recommended_action based on anomaly type
     - _Requirements: 4.3, 4.4, 4.5_
-  - [ ] 4.2 Add anomaly_type classification
+  - [x] 4.2 Add anomaly_type classification
     - Classify as cpu_spike, memory_leak, latency_surge, or error_burst
     - _Requirements: 4.1_
   - [ ]* 4.3 Write property test for anomaly threshold detection
@@ -69,11 +69,11 @@
     - **Property 6: Anomaly Severity Enum Validity**
     - **Validates: Requirements 4.3**
 
-- [ ] 5. Enhance Modal and Blaxel Clients
-  - [ ] 5.1 Update restart_service_via_modal() to return RestartResult-compatible dict
+- [x] 5. Enhance Modal and Blaxel Clients
+  - [x] 5.1 Update restart_service_via_modal() to return RestartResult-compatible dict
     - Include time_taken_ms, post_restart_health, via fields
     - _Requirements: 5.1_
-  - [ ] 5.2 Update restart_service_via_blaxel() to return RestartResult-compatible dict
+  - [x] 5.2 Update restart_service_via_blaxel() to return RestartResult-compatible dict
     - Include time_taken_ms, post_restart_health, via fields
     - _Requirements: 5.1_
   - [ ]* 5.3 Write property test for restart result structure
@@ -83,43 +83,43 @@
     - **Property 9: Backend Selection Based on Configuration**
     - **Validates: Requirements 5.2, 5.3**
 
-- [ ] 6. Enhance LLM Client
-  - [ ] 6.1 Update generate_ops_report() to return structured OpsReport data
+- [x] 6. Enhance LLM Client
+  - [x] 6.1 Update generate_ops_report() to return structured OpsReport data
     - Include infra_health, idle_waste_summary, anomaly_root_causes, cost_forecast_summary, recommended_actions
     - _Requirements: 6.2_
-  - [ ] 6.2 Implement proper fallback chain: SambaNova → HuggingFace → Simulation
+  - [x] 6.2 Implement proper fallback chain: SambaNova → HuggingFace → Simulation
     - Ensure non-empty report in all cases
     - _Requirements: 6.2, 6.3, 6.4_
-  - [ ] 6.3 Add sponsor_integrations_used tracking
+  - [x] 6.3 Add sponsor_integrations_used tracking
     - Track which integrations were used in the response
     - _Requirements: 6.5_
   - [ ]* 6.4 Write property test for LLM fallback chain
     - **Property 11: LLM Provider Fallback Chain**
     - **Validates: Requirements 6.2, 6.3, 6.4**
 
-- [ ] 7. Checkpoint - Ensure all tests pass
+- [x] 7. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Enhance MCP Server Tools
-  - [ ] 8.1 Update tool_list_idle_instances() to use enhanced simulation
+- [x] 8. Enhance MCP Server Tools
+  - [x] 8.1 Update tool_list_idle_instances() to use enhanced simulation
     - Return instances with all required fields
     - Include monthly savings calculation
     - _Requirements: 1.1, 1.5_
-  - [ ] 8.2 Update tool_get_billing_forecast() with breakdown and narrative
+  - [x] 8.2 Update tool_get_billing_forecast() with breakdown and narrative
     - Include cost breakdown by tier and region
     - Add risk_factors when confidence < 0.6
     - _Requirements: 2.1, 2.4, 2.5_
-  - [ ] 8.3 Update tool_get_metrics() with enhanced MetricPoints
+  - [x] 8.3 Update tool_get_metrics() with enhanced MetricPoints
     - Return metrics with network_in and network_out
     - Ensure at least 24 data points
     - _Requirements: 3.1, 3.2_
-  - [ ] 8.4 Update tool_detect_anomaly() with enhanced AnomalyResult
+  - [x] 8.4 Update tool_detect_anomaly() with enhanced AnomalyResult
     - Include anomaly_type and recommended_action
     - _Requirements: 4.1, 4.4_
-  - [ ] 8.5 Update tool_restart_service() with RestartResult structure
+  - [x] 8.5 Update tool_restart_service() with RestartResult structure
     - Return time_taken_ms, post_restart_health, via
     - _Requirements: 5.1_
-  - [ ] 8.6 Update tool_summarize_infra() with enhanced report
+  - [x] 8.6 Update tool_summarize_infra() with enhanced report
     - Include all OpsReport sections
     - Track sponsor integrations used
     - _Requirements: 6.1, 6.2, 6.5_
@@ -136,20 +136,20 @@
     - **Property 10: Infrastructure Summary Completeness**
     - **Validates: Requirements 6.1**
 
-- [ ] 9. Enhance Orchestrator
-  - [ ] 9.1 Fix orchestrator imports and tool references
+- [x] 9. Enhance Orchestrator
+  - [x] 9.1 Fix orchestrator imports and tool references
     - Update MCP_TOOLS reference to use actual tool functions
     - Fix llm_client import
     - _Requirements: 8.1_
-  - [ ] 9.2 Implement cost_optimization workflow
+  - [x] 9.2 Implement cost_optimization workflow
     - Aggregate idle instances and billing forecast
     - Calculate potential savings
     - _Requirements: 8.2_
-  - [ ] 9.3 Implement health_check workflow
+  - [x] 9.3 Implement health_check workflow
     - Get metrics and detect anomalies for a service
     - Generate health summary
     - _Requirements: 8.2_
-  - [ ] 9.4 Implement full_analysis workflow
+  - [x] 9.4 Implement full_analysis workflow
     - Run all tools and aggregate results
     - Generate comprehensive LLM report
     - _Requirements: 8.2, 8.4_
@@ -157,37 +157,37 @@
     - **Property 13: Workflow Aggregation**
     - **Validates: Requirements 8.4**
 
-- [ ] 10. Checkpoint - Ensure all tests pass
+- [x] 10. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 11. Enhance Gradio UI
-  - [ ] 11.1 Update UI to use enhanced tool outputs
+- [x] 11. Enhance Gradio UI
+  - [x] 11.1 Update UI to use enhanced tool outputs
     - Display all new fields in appropriate sections
     - _Requirements: 7.1_
-  - [ ] 11.2 Add Infrastructure Summary section
+  - [x] 11.2 Add Infrastructure Summary section
     - Display total_instances, running_instances, idle_instances, error_instances, health_score
     - _Requirements: 7.1_
-  - [ ] 11.3 Enhance Idle Instances display with savings
+  - [x] 11.3 Enhance Idle Instances display with savings
     - Show monthly savings calculation for each instance
     - _Requirements: 7.3_
-  - [ ] 11.4 Enhance Anomaly Detection display
+  - [x] 11.4 Enhance Anomaly Detection display
     - Show risk level, anomaly count, baseline vs current comparison
     - _Requirements: 7.4_
-  - [ ] 11.5 Enhance Ops Report display
+  - [x] 11.5 Enhance Ops Report display
     - Show full narrative with all sections
     - Display sponsor integrations used
     - _Requirements: 7.1_
 
-- [ ] 12. Update Configuration and Documentation
-  - [ ] 12.1 Update config.py with all environment variable checks
+- [x] 12. Update Configuration and Documentation
+  - [x] 12.1 Update config.py with all environment variable checks
     - Ensure all sponsor API keys are checked
     - _Requirements: 9.1, 9.2, 9.3, 9.5_
-  - [ ] 12.2 Update README.md with sponsor integration details
+  - [x] 12.2 Update README.md with sponsor integration details
     - Document how each sponsor is used
     - _Requirements: 9.4_
-  - [ ] 12.3 Update .env.example with all required variables
+  - [x] 12.3 Update .env.example with all required variables
     - Include all API key placeholders
     - _Requirements: 9.1, 9.2, 9.3, 9.5_
 
-- [ ] 13. Final Checkpoint - Ensure all tests pass
+- [x] 13. Final Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.

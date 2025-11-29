@@ -1,32 +1,38 @@
+#!/usr/bin/env python3
+"""
+Cloud Ops Sentinel MCP Server
+Exposes 6 core cloud operations tools via Model Context Protocol
+"""
+
 import os
 import sys
-from typing import Dict, Any, List
-from datetime import datetime, timedelta
+from typing import Dict, Any
+from datetime import datetime
 import json
 
-# Add parent directory to path for imports when running as script
-if __name__ == "__main__":
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(current_dir)
-    if parent_dir not in sys.path:
-        sys.path.insert(0, parent_dir)
+# Add parent directory to path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
 
-# Handle imports for both module and script execution
-try:
-    from .infra_simulation import generate_fake_infra, compute_idle_instances, generate_fake_metrics
-    from .modal_client import restart_service_via_modal
-    from .blaxel_client import restart_service_via_blaxel
-    from .hyperbolic_client import detect_anomaly_from_metrics
-    from .llm_client import generate_ops_report
-    from .models import CostForecast, AnomalyResult
-except ImportError:
-    # Running as script - use absolute imports
-    from app.infra_simulation import generate_fake_infra, compute_idle_instances, generate_fake_metrics
-    from app.modal_client import restart_service_via_modal
-    from app.blaxel_client import restart_service_via_blaxel
-    from app.hyperbolic_client import detect_anomaly_from_metrics
-    from app.llm_client import generate_ops_report
-    from app.models import CostForecast, AnomalyResult
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import Tool, TextContent
+
+# Import app modules
+from app.infra_simulation import (
+    generate_fake_infra, compute_idle_instances, generate_fake_metrics,
+    compute_infra_summary, estimate_monthly_cost, INSTANCE_COSTS
+)
+from app.modal_client import restart_service_via_modal
+from app.blaxel_client import restart_service_via_blaxel
+from app.hyperbolic_client import detect_anomaly_from_metrics
+from app.llm_client import generate_ops_report, get_integrations_used
+from app.models import CostForecast, AnomalyResult
+
+# Create MCP server
+server = Server("cloud-ops-sentinel")
 
 
 def serialize_datetime(obj):
@@ -37,48 +43,75 @@ def serialize_datetime(obj):
 
 
 def tool_list_idle_instances() -> Dict[str, Any]:
-    """Get list of idle instances using fake infra generation and idle detection"""
+    """Get list of idle instances with monthly savings calculation (Requirements 1.1, 1.5)"""
     instances, services = generate_fake_infra()
     idle_instances = compute_idle_instances(instances)
-
+    
+    # Calculate monthly savings for each idle instance
+    idle_data = []
+    total_savings = 0.0
+    for inst in idle_instances:
+        tier = inst.tags.get("tier", "worker")
+        hourly_cost = INSTANCE_COSTS.get(tier, 0.10)
+        monthly_savings = hourly_cost * 24 * 30
+        total_savings += monthly_savings
+        
+        inst_dict = json.loads(json.dumps(inst.model_dump(), default=serialize_datetime))
+        inst_dict["monthly_savings"] = round(monthly_savings, 2)
+        inst_dict["hourly_cost"] = hourly_cost
+        idle_data.append(inst_dict)
+    
     return {
-        "idle_instances": [instance.model_dump() for instance in idle_instances]
+        "idle_instances": idle_data,
+        "total_idle_count": len(idle_instances),
+        "total_monthly_savings": round(total_savings, 2)
     }
 
 
 def tool_get_billing_forecast(month: str) -> Dict[str, Any]:
-    """Generate billing forecast for given month"""
-    # Simple cost calculation: base_cost + k * avg_usage
-    base_cost = 1000.0  # Base monthly cost
-    avg_usage_factor = 0.5  # Usage multiplier
-
-    # Get current usage metrics for calculation
+    """Generate billing forecast with breakdown and narrative (Requirements 2.1, 2.4, 2.5)"""
     instances, services = generate_fake_infra()
-    total_avg_usage = 0
-    for instance in instances:
-        if instance.cpu_usage:
-            avg_cpu = sum(instance.cpu_usage) / len(instance.cpu_usage)
-            total_avg_usage += avg_cpu
-
-    predicted_cost = base_cost + (total_avg_usage * avg_usage_factor)
-    confidence = 0.75  # Simple confidence level
-
+    
+    # Get detailed cost breakdown
+    cost_data = estimate_monthly_cost(instances, days=30)
+    
+    # Calculate confidence based on data quality
+    confidence = 0.75 if len(instances) >= 5 else 0.55
+    
+    # Build risk factors if confidence is low
+    risk_factors = []
+    if confidence < 0.6:
+        risk_factors.append("Limited historical data available")
+        risk_factors.append("High variance in usage patterns")
+    if cost_data.get("idle_instance_count", 0) > 2:
+        risk_factors.append(f"{cost_data['idle_instance_count']} idle instances may be terminated")
+    
+    # Generate narrative
+    narrative = f"Forecast for {month}: Predicted cost ${cost_data['total_monthly_cost']:.2f} with {confidence:.0%} confidence. "
+    if cost_data.get("potential_savings", 0) > 0:
+        narrative += f"Potential savings of ${cost_data['potential_savings']:.2f} from idle resources."
+    
     forecast = CostForecast(
         month=month,
-        predicted_cost=predicted_cost,
-        confidence=confidence
+        predicted_cost=cost_data["total_monthly_cost"],
+        confidence=confidence,
+        narrative=narrative,
+        breakdown=cost_data.get("cost_by_tier", {}),
+        risk_factors=risk_factors
     )
-
-    return forecast.model_dump()
+    
+    result = forecast.model_dump()
+    result["cost_by_region"] = cost_data.get("cost_by_region", {})
+    result["potential_savings"] = cost_data.get("potential_savings", 0)
+    return result
 
 
 def tool_get_metrics(service_id: str) -> Dict[str, Any]:
     """Get metrics for specified service"""
     metrics = generate_fake_metrics(service_id)
-
     return {
         "service_id": service_id,
-        "metrics": [json.loads(json.dumps(metric.model_dump(), default=serialize_datetime)) for metric in metrics]
+        "metrics": [json.loads(json.dumps(m.model_dump(), default=serialize_datetime)) for m in metrics]
     }
 
 
@@ -86,90 +119,149 @@ def tool_detect_anomaly(service_id: str) -> Dict[str, Any]:
     """Detect anomalies for specified service"""
     metrics = generate_fake_metrics(service_id)
     anomaly_result = detect_anomaly_from_metrics(service_id, metrics)
-
     return anomaly_result.model_dump()
 
 
 def tool_restart_service(service_id: str) -> Dict[str, Any]:
-    """Restart service via Modal or Blaxel"""
+    """Restart service via Modal or Blaxel with RestartResult structure (Requirements 5.1)"""
     use_blaxel = os.getenv("USE_BLAXEL", "").lower() == "true"
-
     if use_blaxel:
         result = restart_service_via_blaxel(service_id)
     else:
         result = restart_service_via_modal(service_id)
-
+    
+    # Return RestartResult-compatible structure
     return {
-        "status": "restarted",
-        "service_id": service_id,
-        "result": result
+        "service_id": result.get("service_id", service_id),
+        "restart_status": result.get("restart_status", "success"),
+        "time_taken_ms": result.get("time_taken_ms", 0),
+        "post_restart_health": result.get("post_restart_health"),
+        "via": result.get("via", "unknown"),
+        "timestamp": result.get("timestamp", datetime.now().isoformat())
     }
 
 
 def tool_summarize_infra() -> Dict[str, Any]:
-    """Generate infrastructure summary and ops report"""
-    # Collect infrastructure data
+    """Generate infrastructure summary with enhanced OpsReport (Requirements 6.1, 6.2, 6.5)"""
     instances, services = generate_fake_infra()
     idle_instances = compute_idle_instances(instances)
-
-    # Get billing forecast for current month
     current_month = datetime.now().strftime("%Y-%m")
     billing_forecast = tool_get_billing_forecast(current_month)
-
-    # Get anomalies for each service
-    anomalies = []
-    for service in services:
-        service_anomaly = tool_detect_anomaly(service.service_id)
-        anomalies.append(service_anomaly)
-
-    # Prepare summary data
-    summary_data = {
-        "instances": [json.loads(json.dumps(instance.model_dump(), default=serialize_datetime)) for instance in instances],
-        "services": [json.loads(json.dumps(service.model_dump(), default=serialize_datetime)) for service in services],
-        "idle_instances": [json.loads(json.dumps(instance.model_dump(), default=serialize_datetime)) for instance in idle_instances],
+    
+    # Get anomalies for all services
+    anomalies = [tool_detect_anomaly(svc.service_id) for svc in services]
+    
+    # Compute infrastructure summary
+    infra_summary = compute_infra_summary(instances, services)
+    
+    # Prepare context for LLM report
+    context = {
+        "instances": [json.loads(json.dumps(i.model_dump(), default=serialize_datetime)) for i in instances],
+        "services": [json.loads(json.dumps(s.model_dump(), default=serialize_datetime)) for s in services],
+        "idle_instances": [json.loads(json.dumps(i.model_dump(), default=serialize_datetime)) for i in idle_instances],
         "billing_forecast": billing_forecast,
         "anomalies": anomalies
     }
-
-    # Generate ops report
-    report = generate_ops_report(summary_data)
-
+    
+    # Generate structured ops report
+    report = generate_ops_report(context)
+    
     return {
         "report": report,
-        "summary_data": summary_data
+        "summary": json.loads(json.dumps(infra_summary.model_dump(), default=serialize_datetime)),
+        "summary_data": context,
+        "sponsor_integrations_used": report.get("sponsor_integrations_used", get_integrations_used())
     }
 
 
+# Register MCP tools
+@server.list_tools()
+async def list_tools():
+    """List available MCP tools"""
+    return [
+        Tool(
+            name="list_idle_instances",
+            description="Detect idle compute instances based on CPU, RAM, and network activity. Returns instances with low utilization that could be terminated for cost savings.",
+            inputSchema={"type": "object", "properties": {}, "required": []}
+        ),
+        Tool(
+            name="get_billing_forecast",
+            description="Forecast cloud costs for a specific month based on historical usage patterns.",
+            inputSchema={
+                "type": "object",
+                "properties": {"month": {"type": "string", "description": "Month in YYYY-MM format"}},
+                "required": ["month"]
+            }
+        ),
+        Tool(
+            name="get_metrics",
+            description="Get performance metrics (CPU, RAM, latency, error rate) for a specific service.",
+            inputSchema={
+                "type": "object",
+                "properties": {"service_id": {"type": "string", "description": "Service ID (e.g., svc_web, svc_api)"}},
+                "required": ["service_id"]
+            }
+        ),
+        Tool(
+            name="detect_anomaly",
+            description="Detect anomalies in service behavior using metrics analysis.",
+            inputSchema={
+                "type": "object",
+                "properties": {"service_id": {"type": "string", "description": "Service ID to analyze"}},
+                "required": ["service_id"]
+            }
+        ),
+        Tool(
+            name="restart_service",
+            description="Restart a service via Modal or Blaxel compute backend.",
+            inputSchema={
+                "type": "object",
+                "properties": {"service_id": {"type": "string", "description": "Service ID to restart"}},
+                "required": ["service_id"]
+            }
+        ),
+        Tool(
+            name="summarize_infra",
+            description="Generate comprehensive infrastructure summary with LLM-powered ops report including health status, cost analysis, and recommendations.",
+            inputSchema={"type": "object", "properties": {}, "required": []}
+        )
+    ]
+
+
+@server.call_tool()
+async def call_tool(name: str, arguments: dict):
+    """Handle tool calls"""
+    try:
+        if name == "list_idle_instances":
+            result = tool_list_idle_instances()
+        elif name == "get_billing_forecast":
+            month = arguments.get("month", datetime.now().strftime("%Y-%m"))
+            result = tool_get_billing_forecast(month)
+        elif name == "get_metrics":
+            service_id = arguments.get("service_id", "svc_web")
+            result = tool_get_metrics(service_id)
+        elif name == "detect_anomaly":
+            service_id = arguments.get("service_id", "svc_web")
+            result = tool_detect_anomaly(service_id)
+        elif name == "restart_service":
+            service_id = arguments.get("service_id", "svc_web")
+            result = tool_restart_service(service_id)
+        elif name == "summarize_infra":
+            result = tool_summarize_infra()
+        else:
+            return [TextContent(type="text", text=f"Unknown tool: {name}")]
+        
+        return [TextContent(type="text", text=json.dumps(result, indent=2, default=serialize_datetime))]
+    except Exception as e:
+        return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+
+async def main():
+    """Run the MCP server"""
+    async with stdio_server() as (read_stream, write_stream):
+        await server.run(read_stream, write_stream, server.create_initialization_options())
+
+
 if __name__ == "__main__":
-    print("Testing MCP Tools...")
-
-    # Test tool_list_idle_instances
-    print("\n=== Testing tool_list_idle_instances ===")
-    result = tool_list_idle_instances()
-    print(json.dumps(result, indent=2))
-
-    # Test tool_get_billing_forecast
-    print("\n=== Testing tool_get_billing_forecast ===")
-    result = tool_get_billing_forecast("2024-12")
-    print(json.dumps(result, indent=2))
-
-    # Test tool_get_metrics
-    print("\n=== Testing tool_get_metrics ===")
-    result = tool_get_metrics("svc_web")
-    print(json.dumps(result, indent=2))
-
-    # Test tool_detect_anomaly
-    print("\n=== Testing tool_detect_anomaly ===")
-    result = tool_detect_anomaly("svc_web")
-    print(json.dumps(result, indent=2))
-
-    # Test tool_restart_service
-    print("\n=== Testing tool_restart_service ===")
-    result = tool_restart_service("svc_web")
-    print(json.dumps(result, indent=2))
-
-    # Test tool_summarize_infra
-    print("\n=== Testing tool_summarize_infra ===")
-    result = tool_summarize_infra()
-    print("Report length:", len(result.get("report", "")))
-    print("Summary data keys:", list(result.get("summary_data", {}).keys()))
+    import asyncio
+    asyncio.run(main())
