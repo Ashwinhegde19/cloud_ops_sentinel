@@ -1,0 +1,208 @@
+# Implementation Plan
+
+- [x] 1. Create Data Models for New Features
+  - [x] 1.1 Add Intent and ChatResponse models to app/models.py
+    - Create Intent model with type, entities, confidence fields
+    - Create ChatResponse model with message, tools_called, results, clarification_needed, timestamp
+    - _Requirements: 1.1, 1.2_
+  - [x] 1.2 Add RemediationEvent and IncidentReport models
+    - Create RemediationEvent with event_id, service_id, anomaly, action_taken, restart_result, post_health, escalated, timestamp
+    - Create IncidentReport with event_id, service_id, root_cause, action_taken, outcome, duration_ms, generated_at
+    - _Requirements: 2.5_
+  - [x] 1.3 Add HygieneScore and ReportData models
+    - Create HygieneScore with score, status, breakdown, suggestions, calculated_at
+    - Create ReportData with generated_at, report_period, executive_summary, hygiene_score, idle_instances, anomalies, cost_forecast, recommendations
+    - _Requirements: 3.1, 4.2_
+  - [ ]* 1.4 Write property test for HygieneScore range validation
+    - **Property 10: Hygiene Score Range**
+    - **Validates: Requirements 3.1**
+
+- [x] 2. Implement Hygiene Score Calculator
+  - [x] 2.1 Create app/hygiene_score.py with core functions
+    - Implement calculate_hygiene_score() that aggregates data from MCP tools
+    - Implement get_factor_scores() to compute individual factor penalties
+    - _Requirements: 3.1, 3.2_
+  - [x] 2.2 Implement scoring formula with correct weights
+    - idle_percentage weight: 0.25
+    - anomaly_penalty weight: 0.30
+    - cost_risk_penalty weight: 0.25
+    - restart_failure_rate weight: 0.20
+    - _Requirements: 3.2_
+  - [x] 2.3 Implement classify_status() function
+    - Return "critical" for score < 50
+    - Return "needs_attention" for 50 <= score <= 75
+    - Return "healthy" for score > 75
+    - _Requirements: 3.3, 3.4, 3.5_
+  - [x] 2.4 Implement generate_suggestions() function
+    - Generate actionable suggestions based on factor scores
+    - _Requirements: 3.6_
+  - [ ]* 2.5 Write property test for score formula correctness
+    - **Property 11: Hygiene Score Formula**
+    - **Validates: Requirements 3.2**
+  - [ ]* 2.6 Write property test for score classification
+    - **Property 12: Score Classification Correctness**
+    - **Validates: Requirements 3.3, 3.4, 3.5**
+  - [ ]* 2.7 Write property test for response completeness
+    - **Property 13: Score Response Completeness**
+    - **Validates: Requirements 3.6**
+
+- [x] 3. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 4. Implement Ops Chat Agent
+  - [x] 4.1 Create app/ops_chat.py with intent parsing
+    - Implement parse_intent() using keyword matching and LLM fallback
+    - Define intent types: query_idle, query_metrics, query_forecast, query_anomaly, action_restart, query_summary, query_hygiene, ambiguous
+    - _Requirements: 1.1_
+  - [x] 4.2 Implement tool chain execution
+    - Implement execute_tool_chain() that maps intents to MCP tool calls
+    - Support multi-tool queries by chaining calls
+    - _Requirements: 1.2, 1.3, 1.5_
+  - [x] 4.3 Implement response formatting
+    - Implement format_response() to convert tool results to natural language
+    - Use SambaNova for narrative generation with simulation fallback
+    - _Requirements: 1.2, 1.3_
+  - [x] 4.4 Implement ambiguity detection and clarification
+    - Detect ambiguous queries and set clarification_needed=true
+    - Generate clarifying questions
+    - _Requirements: 1.4_
+  - [x] 4.5 Implement error handling for tool failures
+    - Catch tool exceptions and return graceful error messages
+    - Suggest alternative actions
+    - _Requirements: 1.6_
+  - [x] 4.6 Implement process_chat_message() main entry point
+    - Integrate intent parsing, tool execution, and response formatting
+    - Maintain conversation context
+    - _Requirements: 1.1, 1.2, 1.3_
+  - [ ]* 4.7 Write property test for intent parsing
+    - **Property 1: Intent Parsing Correctness**
+    - **Validates: Requirements 1.1**
+  - [ ]* 4.8 Write property test for query response completeness
+    - **Property 2: Query Response Completeness**
+    - **Validates: Requirements 1.2, 1.3**
+  - [ ]* 4.9 Write property test for ambiguity detection
+    - **Property 3: Ambiguity Detection**
+    - **Validates: Requirements 1.4**
+  - [ ]* 4.10 Write property test for multi-tool aggregation
+    - **Property 4: Multi-Tool Aggregation**
+    - **Validates: Requirements 1.5**
+  - [ ]* 4.11 Write property test for error handling
+    - **Property 5: Error Graceful Handling**
+    - **Validates: Requirements 1.6**
+
+- [x] 5. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 6. Implement Auto-Remediation Engine
+  - [x] 6.1 Create app/auto_remediate.py with core state management
+    - Implement global state for enabled/disabled mode
+    - Implement per-service auto-restart disable tracking
+    - _Requirements: 2.1, 2.6_
+  - [x] 6.2 Implement check_all_services() function
+    - Iterate through all services and call tool_detect_anomaly()
+    - Return list of anomalies with severity
+    - _Requirements: 2.1_
+  - [x] 6.3 Implement remediate_service() function
+    - Check severity is "high" or "critical" before restart
+    - Call tool_restart_service() and capture result
+    - _Requirements: 2.2_
+  - [x] 6.4 Implement verify_health() function
+    - Check post-restart health score
+    - Return health value for threshold comparison
+    - _Requirements: 2.3_
+  - [x] 6.5 Implement escalation logic
+    - If health < 0.7, disable auto-restart for service
+    - Generate escalation alert
+    - _Requirements: 2.4_
+  - [x] 6.6 Implement generate_incident_report() function
+    - Create IncidentReport with root_cause, action_taken, outcome
+    - _Requirements: 2.5_
+  - [x] 6.7 Implement start/stop_remediation_loop() functions
+    - Background monitoring with configurable interval
+    - Thread-safe state management
+    - _Requirements: 2.1, 2.6_
+  - [ ]* 6.8 Write property test for severity-based restart trigger
+    - **Property 6: Severity-Based Restart Trigger**
+    - **Validates: Requirements 2.2**
+  - [ ]* 6.9 Write property test for post-restart health handling
+    - **Property 7: Post-Restart Health Handling**
+    - **Validates: Requirements 2.3, 2.4**
+  - [ ]* 6.10 Write property test for incident report completeness
+    - **Property 8: Incident Report Completeness**
+    - **Validates: Requirements 2.5**
+  - [ ]* 6.11 Write property test for disabled mode behavior
+    - **Property 9: Disabled Mode Behavior**
+    - **Validates: Requirements 2.6**
+
+- [x] 7. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 8. Implement PDF Report Generator
+  - [x] 8.1 Create app/pdf_report.py with report data aggregation
+    - Implement build_report_data() to collect all report sections
+    - Aggregate hygiene score, idle instances, anomalies, cost forecast
+    - _Requirements: 4.2_
+  - [x] 8.2 Implement create_section_narrative() with SambaNova
+    - Generate LLM-powered narratives for each section
+    - Fall back to template-based text on failure
+    - _Requirements: 4.4_
+  - [x] 8.3 Implement generate_pdf_report() function
+    - Use reportlab or fpdf library for PDF generation
+    - Include all required sections with proper formatting
+    - _Requirements: 4.1, 4.2, 4.3_
+  - [x] 8.4 Implement generate_markdown_report() fallback
+    - Create Markdown version with same sections
+    - _Requirements: 4.5_
+  - [x] 8.5 Add timestamp and report period to all reports
+    - Include generated_at timestamp
+    - Include report_period string (e.g., "Last 24 hours")
+    - _Requirements: 4.3_
+  - [ ]* 8.6 Write property test for PDF content completeness
+    - **Property 14: PDF Content Completeness**
+    - **Validates: Requirements 4.2**
+  - [ ]* 8.7 Write property test for report metadata presence
+    - **Property 15: Report Metadata Presence**
+    - **Validates: Requirements 4.3**
+  - [ ]* 8.8 Write property test for PDF fallback behavior
+    - **Property 16: PDF Fallback Behavior**
+    - **Validates: Requirements 4.5**
+
+- [x] 9. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 10. Integrate Features into Gradio UI
+  - [x] 10.1 Add Ops Chat panel to UI
+    - Create chat interface with text input and conversation history
+    - Wire to process_chat_message() function
+    - _Requirements: 5.1_
+  - [x] 10.2 Add Auto-Remediation toggle and event log
+    - Create toggle switch for enable/disable
+    - Create scrollable event log display
+    - Wire to start/stop_remediation_loop()
+    - _Requirements: 5.2_
+  - [x] 10.3 Add Infra Hygiene Score gauge display
+    - Create prominent gauge visualization (0-100)
+    - Display breakdown by factor
+    - Show status classification with color coding
+    - _Requirements: 5.3_
+  - [x] 10.4 Add PDF Report download button
+    - Create "Download PDF Report" button
+    - Wire to generate_pdf_report() with file download
+    - _Requirements: 5.4_
+  - [x] 10.5 Implement real-time event log updates
+    - Update event log when remediation events occur
+    - Use Gradio's update mechanism
+    - _Requirements: 5.5_
+
+- [x] 11. Update Dependencies and Configuration
+  - [x] 11.1 Add PDF generation library to requirements.txt
+    - Add fpdf2 or reportlab for PDF generation
+    - _Requirements: 4.1_
+  - [x] 11.2 Update README.md with new features documentation
+    - Document Ops Chat usage
+    - Document Auto-Remediation configuration
+    - Document Hygiene Score interpretation
+    - _Requirements: 5.1, 5.2, 5.3, 5.4_
+
+- [x] 12. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

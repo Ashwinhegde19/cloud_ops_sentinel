@@ -84,3 +84,64 @@ class InfraSummary(BaseModel):
     health_score: float
     regions: List[str]
     last_updated: datetime
+
+# ============== HACKATHON ENHANCEMENT MODELS ==============
+
+class Intent(BaseModel):
+    """Parsed intent from natural language query."""
+    type: str  # "query_idle", "query_metrics", "query_forecast", "query_anomaly", "action_restart", "query_summary", "query_hygiene", "ambiguous"
+    entities: Dict[str, str] = {}  # Extracted entities (service_id, month, etc.)
+    confidence: float = 0.0  # Intent classification confidence
+
+
+class ChatResponse(BaseModel):
+    """Response from the Ops Chat agent."""
+    message: str  # Response text
+    tools_called: List[str] = []  # Tools invoked
+    results: Dict = {}  # Raw tool results
+    clarification_needed: bool = False  # Whether clarification was requested
+    timestamp: datetime
+
+
+class RemediationEvent(BaseModel):
+    """Event from auto-remediation loop."""
+    event_id: str
+    service_id: str
+    anomaly: Optional[AnomalyResult] = None
+    action_taken: str  # "restart", "escalate", "none"
+    restart_result: Optional[RestartResult] = None
+    post_health: Optional[float] = None
+    escalated: bool = False
+    timestamp: datetime
+
+
+class IncidentReport(BaseModel):
+    """Incident report generated after remediation."""
+    event_id: str
+    service_id: str
+    root_cause: str
+    action_taken: str
+    outcome: str  # "resolved", "escalated", "failed"
+    duration_ms: float
+    generated_at: datetime
+
+
+class HygieneScore(BaseModel):
+    """Infrastructure hygiene score (0-100)."""
+    score: float  # 0-100
+    status: str  # "critical", "needs_attention", "healthy"
+    breakdown: Dict[str, float] = {}  # Factor scores
+    suggestions: List[str] = []  # Improvement recommendations
+    calculated_at: datetime
+
+
+class ReportData(BaseModel):
+    """Data for PDF/Markdown report generation."""
+    generated_at: datetime
+    report_period: str  # e.g., "Last 24 hours"
+    executive_summary: str
+    hygiene_score: Optional[HygieneScore] = None
+    idle_instances: List[Instance] = []
+    anomalies: List[AnomalyResult] = []
+    cost_forecast: Optional[CostForecast] = None
+    recommendations: List[str] = []

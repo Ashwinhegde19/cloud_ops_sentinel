@@ -749,6 +749,288 @@ def format_infra_summary(result: Dict[str, Any]) -> str:
 """
 
 
+# ============== NEW FEATURE IMPORTS ==============
+try:
+    from .ops_chat import process_chat_message
+    from .auto_remediate import (
+        is_enabled, enable_remediation, disable_remediation,
+        get_event_log, start_remediation_loop, stop_remediation_loop
+    )
+    from .hygiene_score import calculate_hygiene_score
+    from .pdf_report import generate_markdown_report, build_report_data
+except ImportError:
+    from app.ops_chat import process_chat_message
+    from app.auto_remediate import (
+        is_enabled, enable_remediation, disable_remediation,
+        get_event_log, start_remediation_loop, stop_remediation_loop
+    )
+    from app.hygiene_score import calculate_hygiene_score
+    from app.pdf_report import generate_markdown_report, build_report_data
+
+
+# ============== NEW FEATURE FORMATTING ==============
+
+def format_chat_response(message: str, history: list) -> Tuple[str, list]:
+    """Process chat message and return formatted response with full conversation history."""
+    if not message.strip():
+        return _build_conversation_html(history), history
+    
+    response = process_chat_message(message, history)
+    
+    # Update history with new exchange
+    new_history = history + [{"user": message, "assistant": response.message, "tools": response.tools_called}]
+    
+    # Build full conversation HTML
+    return _build_conversation_html(new_history), new_history
+
+
+def _build_conversation_html(history: list) -> str:
+    """Build HTML for the full conversation history with auto-scroll to bottom."""
+    if not history:
+        return '''<div style="min-height: 150px; display: flex; align-items: center; justify-content: center; background: linear-gradient(145deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%); border: 1px dashed rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 24px;">
+            <div style="text-align: center;">
+                <div style="font-size: 32px; margin-bottom: 8px;">💬</div>
+                <p style="color: #64748b; margin: 0;">Ask me anything about your infrastructure!</p>
+                <p style="color: #475569; font-size: 12px; margin-top: 4px;">Try the quick actions above or type your own question</p>
+            </div>
+        </div>'''
+    
+    # Use flex column-reverse to auto-scroll to bottom (newest messages visible)
+    # Outer container with reverse flex, inner container with normal order
+    conversation_html = '''<div style="display: flex; flex-direction: column-reverse; max-height: 500px; overflow-y: auto; background: linear-gradient(145deg, rgba(30, 41, 59, 0.3) 0%, rgba(15, 23, 42, 0.5) 100%); border-radius: 12px;">
+<div style="padding: 16px;">'''
+    
+    for i, exchange in enumerate(history):
+        user_msg = exchange.get("user", "")
+        assistant_msg = exchange.get("assistant", "")
+        tools = exchange.get("tools", [])
+        
+        # Format assistant message with line breaks
+        formatted_msg = assistant_msg.replace('• ', '<br>• ').replace('\n\n', '<br><br>').replace('\n', '<br>')
+        if formatted_msg.startswith('<br>'):
+            formatted_msg = formatted_msg[4:]
+        
+        # Tool badges
+        tools_html = ""
+        if tools:
+            tools_html = '<div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px;">'
+            for t in tools:
+                tools_html += f'<span style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(139, 92, 246, 0.3) 100%); color: #a5b4fc; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 500;">🔧 {t}</span>'
+            tools_html += '</div>'
+        
+        # Add separator between exchanges (except first)
+        if i > 0:
+            conversation_html += '<div style="border-top: 1px solid rgba(99, 102, 241, 0.1); margin: 16px 0;"></div>'
+        
+        conversation_html += f'''
+    <!-- Exchange {i+1} -->
+    <div style="margin-bottom: 16px;">
+        <!-- User Question -->
+        <div style="margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px;">👤</span>
+                <span style="color: #94a3b8; font-size: 12px; font-weight: 500;">You:</span>
+            </div>
+            <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 12px 16px; margin-left: 36px;">
+                <div style="color: #e2e8f0; font-size: 14px; font-weight: 500;">{user_msg}</div>
+            </div>
+        </div>
+        
+        <!-- Assistant Response -->
+        <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px;">🤖</span>
+                <span style="color: #94a3b8; font-size: 12px; font-weight: 500;">Sentinel:</span>
+            </div>
+            <div style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 16px 20px; margin-left: 36px;">
+                <div style="color: #e2e8f0; font-size: 14px; line-height: 1.8;">{formatted_msg}</div>
+                {tools_html}
+            </div>
+        </div>
+    </div>
+'''
+    
+    # Close both inner and outer divs
+    conversation_html += '</div></div>'
+    return conversation_html
+
+
+def format_hygiene_score() -> str:
+    """Get and format the hygiene score."""
+    try:
+        report_data = build_report_data()
+        score = report_data.hygiene_score
+        
+        if not score:
+            return "<p>Unable to calculate hygiene score</p>"
+        
+        # Color based on status
+        status_colors = {
+            "healthy": {"color": "#10b981", "bg": "rgba(16, 185, 129, 0.15)", "border": "rgba(16, 185, 129, 0.5)", "icon": "🟢", "glow": "0 0 30px rgba(16, 185, 129, 0.4)"},
+            "needs_attention": {"color": "#f59e0b", "bg": "rgba(245, 158, 11, 0.15)", "border": "rgba(245, 158, 11, 0.5)", "icon": "🟡", "glow": "0 0 30px rgba(245, 158, 11, 0.4)"},
+            "critical": {"color": "#ef4444", "bg": "rgba(239, 68, 68, 0.15)", "border": "rgba(239, 68, 68, 0.5)", "icon": "🔴", "glow": "0 0 30px rgba(239, 68, 68, 0.4)"}
+        }
+        s = status_colors.get(score.status, status_colors["needs_attention"])
+        
+        # Build breakdown HTML with icons
+        factor_icons = {"idle": "💤", "anomaly": "⚠️", "cost_risk": "💰", "restart": "🔄"}
+        breakdown_html = ""
+        for factor, value in score.breakdown.items():
+            if factor.endswith("_score"):
+                key = factor.replace("_score", "")
+                label = key.replace("_", " ").title()
+                icon = factor_icons.get(key, "📊")
+                bar_color = "#10b981" if value >= 80 else "#f59e0b" if value >= 50 else "#ef4444"
+                breakdown_html += f"""
+                <div style="margin: 12px 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span style="color: #e2e8f0; font-size: 13px;">{icon} {label}</span>
+                        <span style="color: {bar_color}; font-size: 14px; font-weight: 600;">{value:.0f}</span>
+                    </div>
+                    <div style="background: rgba(99, 102, 241, 0.1); border-radius: 6px; height: 10px; overflow: hidden;">
+                        <div style="background: linear-gradient(90deg, {bar_color} 0%, {bar_color}dd 100%); height: 100%; width: {value}%; border-radius: 6px; transition: width 0.5s ease;"></div>
+                    </div>
+                </div>
+                """
+        
+        # Build suggestions HTML
+        suggestions_html = ""
+        for i, sug in enumerate(score.suggestions[:3], 1):
+            suggestions_html += f'<div style="display: flex; align-items: flex-start; margin: 10px 0;"><span style="color: #6366f1; font-weight: 600; margin-right: 10px;">{i}.</span><span style="color: #cbd5e1; line-height: 1.5;">{sug}</span></div>'
+        
+        return f"""
+<div style="text-align: center; margin-bottom: 32px; padding: 24px;">
+    <div style="background: {s['bg']}; border: 3px solid {s['border']}; border-radius: 50%; width: 180px; height: 180px; margin: 0 auto; display: flex; flex-direction: column; justify-content: center; align-items: center; box-shadow: {s['glow']};">
+        <div style="font-size: 56px; font-weight: 800; color: {s['color']}; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">{score.score:.0f}</div>
+        <div style="font-size: 16px; color: #94a3b8; font-weight: 500;">/ 100</div>
+    </div>
+    <div style="margin-top: 20px;">
+        <span style="font-size: 32px;">{s['icon']}</span>
+        <div style="color: {s['color']}; font-size: 22px; font-weight: 700; margin-top: 8px; text-transform: uppercase; letter-spacing: 2px;">{score.status.replace('_', ' ')}</div>
+    </div>
+</div>
+
+<div style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
+    <h4 style="color: #e2e8f0; margin: 0 0 16px 0; font-size: 16px; display: flex; align-items: center;">
+        <span style="margin-right: 8px;">📊</span> Score Breakdown
+    </h4>
+    {breakdown_html}
+</div>
+
+<div style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 16px; padding: 20px;">
+    <h4 style="color: #e2e8f0; margin: 0 0 16px 0; font-size: 16px; display: flex; align-items: center;">
+        <span style="margin-right: 8px;">💡</span> Recommendations
+    </h4>
+    {suggestions_html}
+</div>
+"""
+    except Exception as e:
+        return f"<p style='color: #ef4444;'>Error calculating score: {str(e)}</p>"
+
+
+def format_remediation_status() -> str:
+    """Format auto-remediation status and event log."""
+    enabled = is_enabled()
+    events = get_event_log()
+    
+    # Status card with animation effect
+    status_color = "#10b981" if enabled else "#ef4444"
+    status_bg = "rgba(16, 185, 129, 0.15)" if enabled else "rgba(239, 68, 68, 0.15)"
+    status_border = "rgba(16, 185, 129, 0.4)" if enabled else "rgba(239, 68, 68, 0.4)"
+    status_glow = "0 0 20px rgba(16, 185, 129, 0.3)" if enabled else "0 0 20px rgba(239, 68, 68, 0.3)"
+    
+    status_html = f"""
+<div style="background: {status_bg}; border: 2px solid {status_border}; border-radius: 16px; padding: 24px; margin-bottom: 20px; text-align: center; box-shadow: {status_glow};">
+    <div style="font-size: 48px; margin-bottom: 12px;">{'🤖' if enabled else '🔒'}</div>
+    <div style="color: {status_color}; font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">
+        {'ACTIVE' if enabled else 'INACTIVE'}
+    </div>
+    <div style="color: #94a3b8; font-size: 13px; margin-top: 8px;">
+        {'Monitoring all services for anomalies' if enabled else 'Click toggle to enable autonomous remediation'}
+    </div>
+</div>
+"""
+    
+    # Stats row
+    total_events = len(events)
+    restarts = len([e for e in events if e.action_taken == "restart"])
+    escalations = len([e for e in events if e.escalated])
+    
+    stats_html = f"""
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
+    <div style="background: linear-gradient(145deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.05) 100%); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 16px; text-align: center;">
+        <div style="font-size: 28px; font-weight: 700; color: #6366f1;">{total_events}</div>
+        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Total Events</div>
+    </div>
+    <div style="background: linear-gradient(145deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 16px; text-align: center;">
+        <div style="font-size: 28px; font-weight: 700; color: #10b981;">{restarts}</div>
+        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Restarts</div>
+    </div>
+    <div style="background: linear-gradient(145deg, rgba(245, 158, 11, 0.15) 0%, rgba(245, 158, 11, 0.05) 100%); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 16px; text-align: center;">
+        <div style="font-size: 28px; font-weight: 700; color: #f59e0b;">{escalations}</div>
+        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Escalations</div>
+    </div>
+</div>
+"""
+    
+    # Events log
+    if events:
+        events_html = "<h4 style='color: #e2e8f0; margin: 0 0 16px 0; font-size: 15px;'>📋 Recent Events</h4>"
+        for event in reversed(events[-5:]):  # Last 5 events, newest first
+            if event.action_taken == "restart":
+                action_icon = "🔄"
+                action_color = "#10b981"
+            elif event.escalated:
+                action_icon = "⚠️"
+                action_color = "#f59e0b"
+            else:
+                action_icon = "👁️"
+                action_color = "#94a3b8"
+            
+            health_display = f"{event.post_health:.0%}" if event.post_health else "N/A"
+            health_color = "#10b981" if event.post_health and event.post_health >= 0.7 else "#f59e0b" if event.post_health else "#94a3b8"
+            
+            events_html += f"""
+<div style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(99, 102, 241, 0.15); border-radius: 10px; padding: 14px; margin: 10px 0;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 18px;">{action_icon}</span>
+            <span style="color: #e2e8f0; font-weight: 600;">{event.service_id}</span>
+        </div>
+        <span style="background: {action_color}22; color: {action_color}; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase;">{event.action_taken}</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(99, 102, 241, 0.1);">
+        <span style="color: #64748b; font-size: 12px;">🕐 {event.timestamp.strftime('%H:%M:%S')}</span>
+        <span style="color: {health_color}; font-size: 12px; font-weight: 500;">Health: {health_display}</span>
+    </div>
+</div>
+"""
+    else:
+        events_html = """
+<div style="text-align: center; padding: 32px;">
+    <div style="font-size: 48px; margin-bottom: 12px; opacity: 0.5;">📭</div>
+    <p style="color: #64748b; margin: 0;">No remediation events yet</p>
+    <p style="color: #475569; font-size: 12px; margin-top: 8px;">Events will appear here when anomalies are detected</p>
+</div>
+"""
+    
+    return status_html + stats_html + f"""
+<div style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 16px; padding: 20px;">
+    {events_html}
+</div>
+"""
+
+
+def toggle_remediation(current_state: bool) -> Tuple[str, bool]:
+    """Toggle auto-remediation on/off."""
+    if current_state:
+        stop_remediation_loop()
+        return format_remediation_status(), False
+    else:
+        start_remediation_loop()
+        return format_remediation_status(), True
+
+
 # ============== MAIN LAUNCH FUNCTION ==============
 
 def launch():
@@ -872,6 +1154,147 @@ def launch():
                     fn=lambda: format_ops_report(tool_summarize_infra()),
                     outputs=[report_output]
                 )
+            
+            # Tab 7: Ops Chat (NEW)
+            with gr.Tab("💬 Ops Chat", id="chat"):
+                gr.HTML('<h2 style="color: #e2e8f0; margin: 0 0 8px 0;">AI Operations Assistant</h2>')
+                gr.HTML('''<p style="color: #94a3b8; margin: 0 0 8px 0;">Ask questions in natural language - I'll call the right tools automatically</p>
+                <p style="color: #64748b; font-size: 11px; margin: 0 0 16px 0;">
+                    <span style="background: rgba(16, 185, 129, 0.2); color: #6ee7b7; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">🧠 LangChain + SambaNova</span>
+                    Powered by agentic AI with automatic tool selection
+                </p>''')
+                
+                chat_history = gr.State([])
+                
+                # Quick action buttons
+                gr.HTML("""
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+                    <span style="color: #64748b; font-size: 12px; padding: 6px 0;">Quick actions:</span>
+                </div>
+                """)
+                
+                with gr.Row():
+                    quick_idle = gr.Button("🚫 Idle Instances", size="sm", variant="secondary")
+                    quick_metrics = gr.Button("📊 Metrics", size="sm", variant="secondary")
+                    quick_forecast = gr.Button("💰 Cost Forecast", size="sm", variant="secondary")
+                    quick_anomaly = gr.Button("⚠️ Anomalies", size="sm", variant="secondary")
+                    quick_hygiene = gr.Button("🏥 Hygiene Score", size="sm", variant="secondary")
+                    clear_chat_btn = gr.Button("🗑️ Clear", size="sm", variant="secondary")
+                
+                # Chat output area
+                chat_output = gr.HTML(
+                    value='''<div style="min-height: 150px; display: flex; align-items: center; justify-content: center; background: linear-gradient(145deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%); border: 1px dashed rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 24px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 32px; margin-bottom: 8px;">💬</div>
+                            <p style="color: #64748b; margin: 0;">Ask me anything about your infrastructure!</p>
+                            <p style="color: #475569; font-size: 12px; margin-top: 4px;">Try the quick actions above or type your own question</p>
+                        </div>
+                    </div>''',
+                    elem_id="chat-output"
+                )
+                
+                # Input row
+                with gr.Row(equal_height=True):
+                    chat_input = gr.Textbox(
+                        label="Your Question",
+                        placeholder="e.g., 'Show me idle instances' or 'Restart svc_web'",
+                        scale=5,
+                        container=True
+                    )
+                    chat_btn = gr.Button("💬 Send", variant="primary", size="lg", scale=1, min_width=100)
+                
+                def process_and_clear(message, history):
+                    if not message.strip():
+                        return chat_output.value, history, ""
+                    response_html, new_history = format_chat_response(message, history)
+                    return response_html, new_history, ""
+                
+                def quick_action(query, history):
+                    response_html, new_history = format_chat_response(query, history)
+                    return response_html, new_history
+                
+                def clear_chat():
+                    """Clear conversation history."""
+                    return _build_conversation_html([]), []
+                
+                # Quick action handlers
+                quick_idle.click(fn=lambda h: quick_action("Show me idle instances", h), inputs=[chat_history], outputs=[chat_output, chat_history])
+                quick_metrics.click(fn=lambda h: quick_action("Show metrics for svc_web", h), inputs=[chat_history], outputs=[chat_output, chat_history])
+                quick_forecast.click(fn=lambda h: quick_action("What's the cost forecast?", h), inputs=[chat_history], outputs=[chat_output, chat_history])
+                quick_anomaly.click(fn=lambda h: quick_action("Check for anomalies", h), inputs=[chat_history], outputs=[chat_output, chat_history])
+                quick_hygiene.click(fn=lambda h: quick_action("What's the hygiene score?", h), inputs=[chat_history], outputs=[chat_output, chat_history])
+                clear_chat_btn.click(fn=clear_chat, outputs=[chat_output, chat_history])
+                
+                chat_btn.click(
+                    fn=process_and_clear,
+                    inputs=[chat_input, chat_history],
+                    outputs=[chat_output, chat_history, chat_input]
+                )
+                chat_input.submit(
+                    fn=process_and_clear,
+                    inputs=[chat_input, chat_history],
+                    outputs=[chat_output, chat_history, chat_input]
+                )
+            
+            # Tab 8: Hygiene Score (NEW)
+            with gr.Tab("🏥 Hygiene Score", id="hygiene"):
+                gr.HTML('<h2 style="color: #e2e8f0; margin: 0 0 8px 0;">Infrastructure Hygiene Score</h2>')
+                gr.HTML('<p style="color: #94a3b8; margin: 0 0 16px 0;">A single 0-100 score measuring overall infrastructure health</p>')
+                
+                hygiene_btn = gr.Button("📊 Calculate Hygiene Score", variant="primary", size="lg")
+                hygiene_output = gr.HTML(label="Hygiene Score")
+                
+                hygiene_btn.click(
+                    fn=format_hygiene_score,
+                    outputs=[hygiene_output]
+                )
+            
+            # Tab 9: Auto-Remediation (NEW)
+            with gr.Tab("🤖 Auto-Remediation", id="remediation"):
+                gr.HTML('<h2 style="color: #e2e8f0; margin: 0 0 8px 0;">Autonomous Remediation</h2>')
+                gr.HTML('<p style="color: #94a3b8; margin: 0 0 16px 0;">Automatically detect and fix service anomalies</p>')
+                
+                remediation_state = gr.State(False)
+                
+                with gr.Row():
+                    toggle_btn = gr.Button("🔄 Toggle Auto-Remediation", variant="primary", size="lg")
+                    refresh_events_btn = gr.Button("🔄 Refresh Events", variant="secondary", size="lg")
+                
+                remediation_output = gr.HTML(value=format_remediation_status())
+                
+                toggle_btn.click(
+                    fn=toggle_remediation,
+                    inputs=[remediation_state],
+                    outputs=[remediation_output, remediation_state]
+                )
+                refresh_events_btn.click(
+                    fn=format_remediation_status,
+                    outputs=[remediation_output]
+                )
+                
+                gr.HTML("""
+                <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 12px; margin-top: 16px;">
+                    <p style="color: #fbbf24; margin: 0; font-size: 12px;"><strong>⚠️ How it works:</strong></p>
+                    <p style="color: #94a3b8; margin: 4px 0 0 0; font-size: 11px;">
+                        When enabled, the system monitors all services for anomalies. If a HIGH or CRITICAL severity anomaly is detected,
+                        it automatically restarts the service and verifies health. If health remains below 70%, the service is escalated
+                        and auto-restart is disabled for that service.
+                    </p>
+                </div>
+                """)
+            
+            # Tab 10: Download Report (NEW)
+            with gr.Tab("📥 Download Report", id="download"):
+                gr.HTML('<h2 style="color: #e2e8f0; margin: 0 0 8px 0;">Export Operations Report</h2>')
+                gr.HTML('<p style="color: #94a3b8; margin: 0 0 16px 0;">Download a comprehensive report for stakeholders</p>')
+                
+                download_btn = gr.Button("📄 Generate Markdown Report", variant="primary", size="lg")
+                download_output = gr.Markdown(label="Report Preview")
+                
+                download_btn.click(
+                    fn=generate_markdown_report,
+                    outputs=[download_output]
+                )
         
         # Footer
         gr.HTML("""
@@ -888,10 +1311,16 @@ def launch():
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,
-        share=False,
+        share=True,
         show_error=True
     )
 
 
 if __name__ == "__main__":
+    # Check if running with gradio reload
+    import os
+    if os.environ.get("GRADIO_WATCH_DIRS"):
+        # Running with hot reload via gradio CLI
+        import gradio as gr
+        gr.close_all()
     launch()

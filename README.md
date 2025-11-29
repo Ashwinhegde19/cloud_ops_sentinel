@@ -13,12 +13,19 @@
 
 ## ✨ Features
 
+### Core Features
 - 📊 **Real-time Dashboard** - Infrastructure health score, instance counts, daily costs
 - 🚫 **Idle Resource Detection** - Find underutilized instances with savings calculator
 - 💰 **Cost Forecasting** - Predict future costs with confidence intervals
 - 🔍 **Anomaly Detection** - AI-powered service health analysis
 - 🔄 **Service Control** - Restart services via Modal/Blaxel backends
 - 📋 **AI Ops Reports** - LLM-generated infrastructure analysis with recommendations
+
+### 🆕 Advanced Features (Hackathon Enhancements)
+- 💬 **Ops Chat** - Natural language interface that auto-calls MCP tools ("Show me idle instances", "Restart svc_web")
+- 🤖 **Auto-Remediation** - Autonomous anomaly detection → restart → verify → report loop
+- 🏥 **Hygiene Score** - Single 0-100 score measuring overall infrastructure health with weighted factors
+- 📥 **PDF/Markdown Reports** - Downloadable reports with SambaNova-generated narratives
 
 ## 🏗️ Architecture
 
@@ -132,7 +139,11 @@ cloud-ops-sentinel/
 │   ├── blaxel_client.py    # Blaxel compute
 │   ├── infra_simulation.py # Synthetic data generation
 │   ├── models.py           # Pydantic data models
-│   └── config.py           # Configuration management
+│   ├── config.py           # Configuration management
+│   ├── ops_chat.py         # 🆕 Natural language chat agent
+│   ├── auto_remediate.py   # 🆕 Auto-remediation engine
+│   ├── hygiene_score.py    # 🆕 Infrastructure hygiene scoring
+│   └── pdf_report.py       # 🆕 PDF/Markdown report generation
 ├── .env.example            # Environment template
 ├── requirements.txt        # Python dependencies
 ├── start.sh               # Quick start script (Linux/Mac)

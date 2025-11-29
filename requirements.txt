@@ -1,10 +1,17 @@
-# Cloud Ops Sentinel - Minimal dependencies
+# Cloud Ops Sentinel - Dependencies
 gradio>=4.0.0
 requests>=2.31.0
 pydantic>=2.0.0
 fastapi>=0.104.0
 uvicorn>=0.24.0
+python-dotenv>=1.0.0
 
-# Optional: Uncomment if you want to add LangChain later
-# langchain>=0.0.300
+# LangChain for orchestration
+langchain>=0.1.0
+langchain-core>=0.1.0
+
+# PDF generation
+fpdf2>=2.7.0
+
+# Optional: Additional LLM providers
 # langchain-community>=0.0.0
