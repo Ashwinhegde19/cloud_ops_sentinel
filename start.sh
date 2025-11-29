@@ -1,12 +1,21 @@
 #!/bin/bash
 
-# Cloud Ops Sentinel - Quick Start Script
-# This script sets up and runs the Cloud Ops Sentinel demo
+# ☁️ Cloud Ops Sentinel - Quick Start Script
+# Enterprise Cloud Operations Assistant
 
 set -e
 
-echo "🚀 Cloud Ops Sentinel - Quick Start"
-echo "=================================="
+echo ""
+echo "  ☁️  Cloud Ops Sentinel"
+echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Enterprise Cloud Operations Assistant"
+echo ""
+
+# Check Python version
+if ! command -v python3 &> /dev/null; then
+    echo "❌ Python 3 is required but not installed."
+    exit 1
+fi
 
 # Check if virtual environment exists
 if [ ! -d "venv" ]; then
@@ -18,56 +27,34 @@ fi
 echo "🔧 Activating virtual environment..."
 source venv/bin/activate
 
+# Install/upgrade pip
+pip install --upgrade pip -q
+
 # Install dependencies
 echo "📥 Installing dependencies..."
-pip install -r requirements.txt
+pip install -r requirements.txt -q
 
 # Check if .env exists
 if [ ! -f ".env" ]; then
-    echo "⚙️ Creating environment file..."
+    echo "⚙️  Creating .env from template..."
     cp .env.example .env
-    echo "📝 Edit .env with your API keys (optional)"
+    echo ""
+    echo "📝 Note: Edit .env with your API keys for full functionality"
+    echo "   The app works in simulation mode without API keys."
+    echo ""
 fi
 
 echo ""
-echo "✅ Setup complete! Available commands:"
+echo "✅ Setup complete!"
 echo ""
-echo "🌐 Start UI:           python app/ui_gradio.py"
-echo "🔧 Test MCP Tools:     python app/mcp_server.py"
-echo "🧪 Run Demo:           python demo.py"
-echo "🧪 Run Demo (idle):    python demo.py --tool idle"
-echo "🧪 Run Demo (all):     python demo.py --all"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "🌐 UI will be available at: http://localhost:7860"
+echo "🚀 Starting Cloud Ops Sentinel..."
+echo ""
+echo "   Dashboard: http://localhost:7860"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Ask user what to run
-echo "What would you like to do?"
-echo "1) Start Gradio UI"
-echo "2) Run demo script"
-echo "3) Test MCP tools"
-echo "4) Exit"
-read -p "Select option (1-4): " choice
-
-case $choice in
-    1)
-        echo "🚀 Starting Gradio UI..."
-        python app/ui_gradio.py
-        ;;
-    2)
-        echo "🧪 Running demo script..."
-        python demo.py
-        ;;
-    3)
-        echo "🔧 Testing MCP tools..."
-        python app/mcp_server.py
-        ;;
-    4)
-        echo "👋 Goodbye!"
-        exit 0
-        ;;
-    *)
-        echo "❌ Invalid option"
-        exit 1
-        ;;
-esac
+# Start the Gradio UI
+python app/ui_gradio.py

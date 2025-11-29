@@ -31,15 +31,19 @@ def generate_ops_report(context: dict) -> Dict[str, Any]:
     global _integrations_used
     _integrations_used = []
     
-    sambanova_key = os.getenv("SAMBANOVA_API_KEY")
-    hf_key = os.getenv("HF_API_KEY")
+    sambanova_key = os.getenv("SAMBANOVA_API_KEY", "")
+    hf_key = os.getenv("HF_API_KEY", "")
+    
+    # Check if keys are real (not placeholders)
+    sambanova_valid = sambanova_key and "your_" not in sambanova_key.lower() and len(sambanova_key) > 10
+    hf_valid = hf_key and "your_" not in hf_key.lower() and len(hf_key) > 10
 
     # Try SambaNova first (primary)
-    if sambanova_key:
+    if sambanova_valid:
         narrative, provider = _call_sambanova_ops_report(context)
         _integrations_used.append("SambaNova")
     # Fallback to HuggingFace
-    elif hf_key:
+    elif hf_valid:
         narrative, provider = _call_hf_ops_report(context)
         _integrations_used.append("HuggingFace")
     # Final fallback to simulation
