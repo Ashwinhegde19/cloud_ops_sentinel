@@ -1031,27 +1031,194 @@ def toggle_remediation(current_state: bool) -> Tuple[str, bool]:
         return format_remediation_status(), True
 
 
+# ============== SETTINGS HELPER FUNCTIONS ==============
+
+def _render_profile_info() -> str:
+    """Render profile info HTML."""
+    return """
+<div style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 16px; padding: 24px;">
+    <div style="display: grid; gap: 16px;">
+        <div>
+            <label style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">Username</label>
+            <div style="color: #e2e8f0; font-size: 16px; font-weight: 500;">admin</div>
+        </div>
+        <div>
+            <label style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">Role</label>
+            <div style="color: #6366f1; font-size: 16px; font-weight: 500;">Admin</div>
+        </div>
+    </div>
+</div>
+"""
+
+
+def _render_platforms_list() -> str:
+    """Render platforms list HTML."""
+    try:
+        from app.platforms import list_platforms
+    except ImportError:
+        from .platforms import list_platforms
+    
+    platforms = list_platforms()
+    
+    if not platforms:
+        return """
+<div style="text-align: center; padding: 40px; background: linear-gradient(145deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%); border-radius: 12px;">
+    <div style="font-size: 48px; margin-bottom: 16px;">🌐</div>
+    <p style="color: #94a3b8;">No platforms configured yet.</p>
+</div>
+"""
+    
+    html = '<div style="display: grid; gap: 12px;">'
+    type_icons = {"aws": "☁️", "gcp": "🔷", "azure": "🔶", "custom": "⚙️"}
+    
+    for p in platforms:
+        status_color = "#10b981" if p.connection_status == "connected" else "#ef4444" if p.connection_status == "failed" else "#f59e0b"
+        icon = type_icons.get(p.type, "🌐")
+        
+        html += f"""
+<div style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 12px; padding: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 24px;">{icon}</span>
+            <div>
+                <div style="color: #e2e8f0; font-weight: 600;">{p.name}</div>
+                <div style="color: #64748b; font-size: 12px; text-transform: uppercase;">{p.type}</div>
+            </div>
+        </div>
+        <span style="color: {status_color};">● {p.connection_status}</span>
+    </div>
+</div>
+"""
+    html += '</div>'
+    return html
+
+
+def _render_api_keys_list() -> str:
+    """Render API keys list HTML."""
+    try:
+        from app.api_keys import list_keys
+    except ImportError:
+        from .api_keys import list_keys
+    
+    keys = list_keys()
+    
+    if not keys:
+        return """
+<div style="text-align: center; padding: 40px; background: linear-gradient(145deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%); border-radius: 12px;">
+    <div style="font-size: 48px; margin-bottom: 16px;">🔑</div>
+    <p style="color: #94a3b8;">No API keys configured yet.</p>
+</div>
+"""
+    
+    html = '<div style="display: grid; gap: 12px;">'
+    service_icons = {"sambanova": "🧠", "modal": "🚀", "hyperbolic": "🔮", "blaxel": "⚡", "huggingface": "🤗"}
+    
+    for k in keys:
+        icon = service_icons.get(k.service, "🔑")
+        html += f"""
+<div style="background: linear-gradient(145deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 12px; padding: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 20px;">{icon}</span>
+            <div>
+                <div style="color: #e2e8f0; font-weight: 500;">{k.name}</div>
+                <div style="color: #64748b; font-size: 12px; text-transform: uppercase;">{k.service}</div>
+            </div>
+        </div>
+        <div style="font-family: monospace; color: #94a3b8; background: rgba(99, 102, 241, 0.1); padding: 4px 12px; border-radius: 6px;">
+            {k.masked_value}
+        </div>
+    </div>
+</div>
+"""
+    html += '</div>'
+    return html
+
+
+def _change_password(current: str, new: str, confirm: str) -> str:
+    """Handle password change."""
+    if not current or not new or not confirm:
+        return '<p style="color: #ef4444;">❌ All fields are required</p>'
+    if new != confirm:
+        return '<p style="color: #ef4444;">❌ New passwords do not match</p>'
+    if len(new) < 6:
+        return '<p style="color: #ef4444;">❌ Password must be at least 6 characters</p>'
+    return '<p style="color: #10b981;">✅ Password changed successfully</p>'
+
+
+def _add_platform(name: str, ptype: str, creds: str) -> Tuple[str, str]:
+    """Add a new platform."""
+    import json
+    try:
+        from app.platforms import add_platform
+        from app.models import PlatformConfig
+    except ImportError:
+        from .platforms import add_platform
+        from .models import PlatformConfig
+    
+    if not name or not ptype:
+        return '<p style="color: #ef4444;">❌ Name and type are required</p>', _render_platforms_list()
+    
+    try:
+        credentials = json.loads(creds) if creds else {}
+    except json.JSONDecodeError:
+        return '<p style="color: #ef4444;">❌ Invalid JSON for credentials</p>', _render_platforms_list()
+    
+    config = PlatformConfig(name=name, type=ptype, credentials=credentials)
+    add_platform(config)
+    return f'<p style="color: #10b981;">✅ Platform "{name}" added</p>', _render_platforms_list()
+
+
+def _add_api_key(name: str, service: str, value: str) -> Tuple[str, str]:
+    """Add a new API key."""
+    try:
+        from app.api_keys import add_key
+    except ImportError:
+        from .api_keys import add_key
+    
+    if not name or not service or not value:
+        return '<p style="color: #ef4444;">❌ All fields are required</p>', _render_api_keys_list()
+    
+    add_key(name, value, service)
+    return f'<p style="color: #10b981;">✅ API key "{name}" added</p>', _render_api_keys_list()
+
+
 # ============== MAIN LAUNCH FUNCTION ==============
 
 def launch():
     """Launch the attractive Gradio UI."""
     
+    # Sync API keys from database to environment on startup
+    try:
+        from app.api_keys import sync_keys_to_env
+    except ImportError:
+        from .api_keys import sync_keys_to_env
+    sync_keys_to_env()
+    
     with gr.Blocks(title="Cloud Ops Sentinel") as demo:
         
-        # Header
+        # Header with logout button
         gr.HTML("""
-        <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.1) 100%); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 20px; padding: 32px; margin-bottom: 24px; text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 12px;">☁️</div>
-            <h1 style="color: #e2e8f0; margin: 0 0 8px 0; font-size: 36px; font-weight: 700; background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Cloud Ops Sentinel</h1>
-            <p style="color: #94a3b8; margin: 0 0 20px 0; font-size: 16px;">Enterprise Cloud Operations Assistant with AI-Powered Intelligence</p>
-            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
-                <span style="background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 20px; padding: 6px 14px; color: #a5b4fc; font-size: 12px;">🚀 Modal</span>
-                <span style="background: rgba(168, 85, 247, 0.2); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 20px; padding: 6px 14px; color: #c4b5fd; font-size: 12px;">🔮 Hyperbolic</span>
-                <span style="background: rgba(236, 72, 153, 0.2); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 20px; padding: 6px 14px; color: #f9a8d4; font-size: 12px;">⚡ Blaxel</span>
-                <span style="background: rgba(251, 191, 36, 0.2); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 20px; padding: 6px 14px; color: #fcd34d; font-size: 12px;">🤗 Hugging Face</span>
-                <span style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 20px; padding: 6px 14px; color: #6ee7b7; font-size: 12px;">🧠 SambaNova</span>
-                <span style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 20px; padding: 6px 14px; color: #93c5fd; font-size: 12px;">🔗 LangChain</span>
-                <span style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 20px; padding: 6px 14px; color: #fca5a5; font-size: 12px;">🔌 MCP</span>
+        <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.1) 100%); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 20px; padding: 32px; margin-bottom: 24px; position: relative;">
+            <div style="position: absolute; top: 16px; right: 16px;">
+                <a href="/logout" 
+                   style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 8px 16px; color: #fca5a5; font-size: 12px; text-decoration: none; cursor: pointer;">
+                    🚪 Logout
+                </a>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 48px; margin-bottom: 12px;">☁️</div>
+                <h1 style="color: #e2e8f0; margin: 0 0 8px 0; font-size: 36px; font-weight: 700; background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Cloud Ops Sentinel</h1>
+                <p style="color: #94a3b8; margin: 0 0 20px 0; font-size: 16px;">Enterprise Cloud Operations Assistant with AI-Powered Intelligence</p>
+                <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
+                    <span style="background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 20px; padding: 6px 14px; color: #a5b4fc; font-size: 12px;">🚀 Modal</span>
+                    <span style="background: rgba(168, 85, 247, 0.2); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 20px; padding: 6px 14px; color: #c4b5fd; font-size: 12px;">🔮 Hyperbolic</span>
+                    <span style="background: rgba(236, 72, 153, 0.2); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 20px; padding: 6px 14px; color: #f9a8d4; font-size: 12px;">⚡ Blaxel</span>
+                    <span style="background: rgba(251, 191, 36, 0.2); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 20px; padding: 6px 14px; color: #fcd34d; font-size: 12px;">🤗 Hugging Face</span>
+                    <span style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 20px; padding: 6px 14px; color: #6ee7b7; font-size: 12px;">🧠 SambaNova</span>
+                    <span style="background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 20px; padding: 6px 14px; color: #93c5fd; font-size: 12px;">🔗 LangChain</span>
+                    <span style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 20px; padding: 6px 14px; color: #fca5a5; font-size: 12px;">🔌 MCP</span>
+                </div>
             </div>
         </div>
         """)
@@ -1295,6 +1462,79 @@ def launch():
                     fn=generate_markdown_report,
                     outputs=[download_output]
                 )
+            
+            # Tab 11: Settings (Admin)
+            with gr.Tab("⚙️ Settings", id="settings"):
+                gr.HTML('<h2 style="color: #e2e8f0; margin: 0 0 8px 0;">Settings & Configuration</h2>')
+                gr.HTML('<p style="color: #94a3b8; margin: 0 0 16px 0;">Manage platforms, API keys, and user settings</p>')
+                
+                with gr.Tabs():
+                    # Profile tab
+                    with gr.Tab("👤 Profile"):
+                        profile_info = gr.HTML(value=_render_profile_info())
+                        
+                        gr.HTML('<h4 style="color: #e2e8f0; margin: 20px 0 12px 0;">Change Password</h4>')
+                        with gr.Row():
+                            current_pwd = gr.Textbox(label="Current Password", type="password", scale=1)
+                            new_pwd = gr.Textbox(label="New Password", type="password", scale=1)
+                            confirm_pwd = gr.Textbox(label="Confirm Password", type="password", scale=1)
+                        
+                        change_pwd_btn = gr.Button("🔒 Change Password", variant="primary")
+                        pwd_result = gr.HTML()
+                        
+                        change_pwd_btn.click(
+                            fn=_change_password,
+                            inputs=[current_pwd, new_pwd, confirm_pwd],
+                            outputs=[pwd_result]
+                        )
+                    
+                    # Platforms tab
+                    with gr.Tab("🌐 Platforms"):
+                        platforms_list = gr.HTML(value=_render_platforms_list())
+                        
+                        gr.HTML('<h4 style="color: #e2e8f0; margin: 20px 0 12px 0;">Add New Platform</h4>')
+                        with gr.Row():
+                            platform_name = gr.Textbox(label="Platform Name", placeholder="My AWS Account")
+                            platform_type = gr.Dropdown(label="Type", choices=["aws", "gcp", "azure", "custom"], value="aws")
+                        
+                        platform_creds = gr.Textbox(
+                            label="Credentials (JSON)",
+                            placeholder='{"access_key": "...", "secret_key": "...", "region": "us-east-1"}',
+                            lines=3
+                        )
+                        
+                        add_platform_btn = gr.Button("➕ Add Platform", variant="primary")
+                        platform_result = gr.HTML()
+                        
+                        add_platform_btn.click(
+                            fn=_add_platform,
+                            inputs=[platform_name, platform_type, platform_creds],
+                            outputs=[platform_result, platforms_list]
+                        )
+                    
+                    # API Keys tab
+                    with gr.Tab("🔑 API Keys"):
+                        keys_list = gr.HTML(value=_render_api_keys_list())
+                        
+                        gr.HTML('<h4 style="color: #e2e8f0; margin: 20px 0 12px 0;">Add New API Key</h4>')
+                        with gr.Row():
+                            key_name = gr.Textbox(label="Key Name", placeholder="SambaNova Production")
+                            key_service = gr.Dropdown(
+                                label="Service",
+                                choices=["sambanova", "modal", "hyperbolic", "blaxel", "huggingface", "openai", "custom"],
+                                value="sambanova"
+                            )
+                        
+                        key_value = gr.Textbox(label="API Key Value", type="password", placeholder="sk-...")
+                        
+                        add_key_btn = gr.Button("➕ Add API Key", variant="primary")
+                        key_result = gr.HTML()
+                        
+                        add_key_btn.click(
+                            fn=_add_api_key,
+                            inputs=[key_name, key_service, key_value],
+                            outputs=[key_result, keys_list]
+                        )
         
         # Footer
         gr.HTML("""
@@ -1308,12 +1548,43 @@ def launch():
         </div>
         """)
     
-    demo.launch(
-        server_name="0.0.0.0",
-        server_port=7860,
-        share=True,
-        show_error=True
-    )
+    # Check if auth is enabled
+    auth_enabled = os.getenv("ENABLE_AUTH", "false").lower() == "true"
+    
+    if auth_enabled:
+        # Initialize auth and ensure admin exists
+        try:
+            from .auth import ensure_admin_exists, authenticate
+        except ImportError:
+            from app.auth import ensure_admin_exists, authenticate
+        ensure_admin_exists()
+        
+        def auth_fn(username, password):
+            """Gradio auth function."""
+            user = authenticate(username, password)
+            return user is not None
+        
+        demo.launch(
+            server_name="0.0.0.0",
+            server_port=7860,
+            share=True,
+            show_error=True,
+            auth=auth_fn,
+            auth_message="🔐 Cloud Ops Sentinel - Please log in (default: admin/admin123)"
+        )
+    else:
+        demo.launch(
+            server_name="0.0.0.0",
+            server_port=7860,
+            share=True,
+            show_error=True
+        )
+
+
+def launch_with_auth():
+    """Launch with authentication enabled."""
+    os.environ["ENABLE_AUTH"] = "true"
+    launch()
 
 
 if __name__ == "__main__":
