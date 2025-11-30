@@ -25,6 +25,11 @@ tags:
 
 **Watch the full demo:** https://youtu.be/HK8jU1KIRrU
 
+## 📱 Social Media
+
+[![X Post](https://img.shields.io/badge/X-Post-black?style=for-the-badge&logo=x)](https://x.com/ashwinhegde19/status/1995111001101054123)
+
+**X/Twitter:** https://x.com/ashwinhegde19/status/1995111001101054123
 
 ![Cloud Ops Sentinel](https://img.shields.io/badge/Cloud%20Ops-Sentinel-6366f1?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.8+-3776ab?style=flat-square&logo=python)
