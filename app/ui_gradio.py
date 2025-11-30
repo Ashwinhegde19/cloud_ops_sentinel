@@ -1197,15 +1197,20 @@ def launch():
     
     with gr.Blocks(title="Cloud Ops Sentinel") as demo:
         
-        # Header with logout button
-        gr.HTML("""
-        <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.1) 100%); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 20px; padding: 32px; margin-bottom: 24px; position: relative;">
+        # Header (logout button only shown when auth is enabled)
+        auth_enabled = os.getenv("ENABLE_AUTH", "false").lower() == "true"
+        logout_html = """
             <div style="position: absolute; top: 16px; right: 16px;">
                 <a href="/logout" 
                    style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 8px 16px; color: #fca5a5; font-size: 12px; text-decoration: none; cursor: pointer;">
                     🚪 Logout
                 </a>
             </div>
+        """ if auth_enabled else ""
+        
+        gr.HTML(f"""
+        <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.1) 100%); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 20px; padding: 32px; margin-bottom: 24px; position: relative;">
+            {logout_html}
             <div style="text-align: center;">
                 <div style="font-size: 48px; margin-bottom: 12px;">☁️</div>
                 <h1 style="color: #e2e8f0; margin: 0 0 8px 0; font-size: 36px; font-weight: 700; background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Cloud Ops Sentinel</h1>
@@ -1455,86 +1460,104 @@ def launch():
                 gr.HTML('<h2 style="color: #e2e8f0; margin: 0 0 8px 0;">Export Operations Report</h2>')
                 gr.HTML('<p style="color: #94a3b8; margin: 0 0 16px 0;">Download a comprehensive report for stakeholders</p>')
                 
-                download_btn = gr.Button("📄 Generate Markdown Report", variant="primary", size="lg")
+                with gr.Row():
+                    generate_preview_btn = gr.Button("👁️ Preview Report", variant="secondary", size="lg")
+                    download_md_btn = gr.Button("📄 Download Markdown", variant="primary", size="lg")
+                
+                download_file = gr.File(label="Download", visible=False)
                 download_output = gr.Markdown(label="Report Preview")
                 
-                download_btn.click(
+                def create_download_file():
+                    """Generate markdown file for download."""
+                    content = generate_markdown_report()
+                    filename = f"cloud_ops_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+                    filepath = f"/tmp/{filename}"
+                    with open(filepath, "w") as f:
+                        f.write(content)
+                    return gr.File(value=filepath, visible=True)
+                
+                generate_preview_btn.click(
                     fn=generate_markdown_report,
                     outputs=[download_output]
                 )
+                download_md_btn.click(
+                    fn=create_download_file,
+                    outputs=[download_file]
+                )
             
-            # Tab 11: Settings (Admin)
-            with gr.Tab("⚙️ Settings", id="settings"):
-                gr.HTML('<h2 style="color: #e2e8f0; margin: 0 0 8px 0;">Settings & Configuration</h2>')
-                gr.HTML('<p style="color: #94a3b8; margin: 0 0 16px 0;">Manage platforms, API keys, and user settings</p>')
-                
-                with gr.Tabs():
-                    # Profile tab
-                    with gr.Tab("👤 Profile"):
-                        profile_info = gr.HTML(value=_render_profile_info())
-                        
-                        gr.HTML('<h4 style="color: #e2e8f0; margin: 20px 0 12px 0;">Change Password</h4>')
-                        with gr.Row():
-                            current_pwd = gr.Textbox(label="Current Password", type="password", scale=1)
-                            new_pwd = gr.Textbox(label="New Password", type="password", scale=1)
-                            confirm_pwd = gr.Textbox(label="Confirm Password", type="password", scale=1)
-                        
-                        change_pwd_btn = gr.Button("🔒 Change Password", variant="primary")
-                        pwd_result = gr.HTML()
-                        
-                        change_pwd_btn.click(
-                            fn=_change_password,
-                            inputs=[current_pwd, new_pwd, confirm_pwd],
-                            outputs=[pwd_result]
-                        )
+            # Tab 11: Settings (Admin) - only show when auth is enabled
+            if auth_enabled:
+                with gr.Tab("⚙️ Settings", id="settings"):
+                    gr.HTML('<h2 style="color: #e2e8f0; margin: 0 0 8px 0;">Settings & Configuration</h2>')
+                    gr.HTML('<p style="color: #94a3b8; margin: 0 0 16px 0;">Manage platforms, API keys, and user settings</p>')
                     
-                    # Platforms tab
-                    with gr.Tab("🌐 Platforms"):
-                        platforms_list = gr.HTML(value=_render_platforms_list())
-                        
-                        gr.HTML('<h4 style="color: #e2e8f0; margin: 20px 0 12px 0;">Add New Platform</h4>')
-                        with gr.Row():
-                            platform_name = gr.Textbox(label="Platform Name", placeholder="My AWS Account")
-                            platform_type = gr.Dropdown(label="Type", choices=["aws", "gcp", "azure", "custom"], value="aws")
-                        
-                        platform_creds = gr.Textbox(
-                            label="Credentials (JSON)",
-                            placeholder='{"access_key": "...", "secret_key": "...", "region": "us-east-1"}',
-                            lines=3
-                        )
-                        
-                        add_platform_btn = gr.Button("➕ Add Platform", variant="primary")
-                        platform_result = gr.HTML()
-                        
-                        add_platform_btn.click(
-                            fn=_add_platform,
-                            inputs=[platform_name, platform_type, platform_creds],
-                            outputs=[platform_result, platforms_list]
-                        )
-                    
-                    # API Keys tab
-                    with gr.Tab("🔑 API Keys"):
-                        keys_list = gr.HTML(value=_render_api_keys_list())
-                        
-                        gr.HTML('<h4 style="color: #e2e8f0; margin: 20px 0 12px 0;">Add New API Key</h4>')
-                        with gr.Row():
-                            key_name = gr.Textbox(label="Key Name", placeholder="SambaNova Production")
-                            key_service = gr.Dropdown(
-                                label="Service",
-                                choices=["sambanova", "modal", "hyperbolic", "blaxel", "huggingface", "openai", "custom"],
-                                value="sambanova"
+                    with gr.Tabs():
+                        # Profile tab
+                        with gr.Tab("👤 Profile"):
+                            profile_info = gr.HTML(value=_render_profile_info())
+                            
+                            gr.HTML('<h4 style="color: #e2e8f0; margin: 20px 0 12px 0;">Change Password</h4>')
+                            with gr.Row():
+                                current_pwd = gr.Textbox(label="Current Password", type="password", scale=1)
+                                new_pwd = gr.Textbox(label="New Password", type="password", scale=1)
+                                confirm_pwd = gr.Textbox(label="Confirm Password", type="password", scale=1)
+                            
+                            change_pwd_btn = gr.Button("🔒 Change Password", variant="primary")
+                            pwd_result = gr.HTML()
+                            
+                            change_pwd_btn.click(
+                                fn=_change_password,
+                                inputs=[current_pwd, new_pwd, confirm_pwd],
+                                outputs=[pwd_result]
                             )
                         
-                        key_value = gr.Textbox(label="API Key Value", type="password", placeholder="sk-...")
+                        # Platforms tab
+                        with gr.Tab("🌐 Platforms"):
+                            platforms_list = gr.HTML(value=_render_platforms_list())
+                            
+                            gr.HTML('<h4 style="color: #e2e8f0; margin: 20px 0 12px 0;">Add New Platform</h4>')
+                            with gr.Row():
+                                platform_name = gr.Textbox(label="Platform Name", placeholder="My AWS Account")
+                                platform_type = gr.Dropdown(label="Type", choices=["aws", "gcp", "azure", "custom"], value="aws")
+                            
+                            platform_creds = gr.Textbox(
+                                label="Credentials (JSON)",
+                                placeholder='{"access_key": "...", "secret_key": "...", "region": "us-east-1"}',
+                                lines=3
+                            )
+                            
+                            add_platform_btn = gr.Button("➕ Add Platform", variant="primary")
+                            platform_result = gr.HTML()
+                            
+                            add_platform_btn.click(
+                                fn=_add_platform,
+                                inputs=[platform_name, platform_type, platform_creds],
+                                outputs=[platform_result, platforms_list]
+                            )
                         
-                        add_key_btn = gr.Button("➕ Add API Key", variant="primary")
-                        key_result = gr.HTML()
-                        
-                        add_key_btn.click(
-                            fn=_add_api_key,
-                            inputs=[key_name, key_service, key_value],
-                            outputs=[key_result, keys_list]
-                        )
+                        # API Keys tab
+                        with gr.Tab("🔑 API Keys"):
+                            keys_list = gr.HTML(value=_render_api_keys_list())
+                            
+                            gr.HTML('<h4 style="color: #e2e8f0; margin: 20px 0 12px 0;">Add New API Key</h4>')
+                            with gr.Row():
+                                key_name = gr.Textbox(label="Key Name", placeholder="SambaNova Production")
+                                key_service = gr.Dropdown(
+                                    label="Service",
+                                    choices=["sambanova", "modal", "hyperbolic", "blaxel", "huggingface", "openai", "custom"],
+                                    value="sambanova"
+                                )
+                            
+                            key_value = gr.Textbox(label="API Key Value", type="password", placeholder="sk-...")
+                            
+                            add_key_btn = gr.Button("➕ Add API Key", variant="primary")
+                            key_result = gr.HTML()
+                            
+                            add_key_btn.click(
+                                fn=_add_api_key,
+                                inputs=[key_name, key_service, key_value],
+                                outputs=[key_result, keys_list]
+                            )
         
         # Footer
         gr.HTML("""
@@ -1548,37 +1571,21 @@ def launch():
         </div>
         """)
     
-    # Check if auth is enabled
-    auth_enabled = os.getenv("ENABLE_AUTH", "false").lower() == "true"
+    # Return demo for external launch or launch directly
+    return demo
+
+
+def launch_app():
+    """Create and return the Gradio app."""
+    # Sync API keys from database to environment on startup
+    try:
+        from app.api_keys import sync_keys_to_env
+    except ImportError:
+        from .api_keys import sync_keys_to_env
+    sync_keys_to_env()
     
-    if auth_enabled:
-        # Initialize auth and ensure admin exists
-        try:
-            from .auth import ensure_admin_exists, authenticate
-        except ImportError:
-            from app.auth import ensure_admin_exists, authenticate
-        ensure_admin_exists()
-        
-        def auth_fn(username, password):
-            """Gradio auth function."""
-            user = authenticate(username, password)
-            return user is not None
-        
-        demo.launch(
-            server_name="0.0.0.0",
-            server_port=7860,
-            share=True,
-            show_error=True,
-            auth=auth_fn,
-            auth_message="🔐 Cloud Ops Sentinel - Please log in (default: admin/admin123)"
-        )
-    else:
-        demo.launch(
-            server_name="0.0.0.0",
-            server_port=7860,
-            share=True,
-            show_error=True
-        )
+    demo = launch()
+    return demo
 
 
 def launch_with_auth():
