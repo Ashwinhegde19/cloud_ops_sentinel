@@ -1601,4 +1601,11 @@ if __name__ == "__main__":
         # Running with hot reload via gradio CLI
         import gradio as gr
         gr.close_all()
-    launch()
+    demo = launch()
+    # Enable Gradio's built-in auth for local development
+    # Default credentials: admin / admin123
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=7860,
+        auth=("admin", "admin123")
+    )
