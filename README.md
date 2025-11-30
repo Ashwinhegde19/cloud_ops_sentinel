@@ -13,14 +13,31 @@ tags:
   - agents
   - cloud-ops
   - devops
+  - aws-global-vibe
+  - amazon-kiro
 ---
 
 # ☁️ Cloud Ops Sentinel
 
 **AI-Powered Cloud Operations Assistant** - Enterprise-grade infrastructure monitoring, anomaly detection, cost optimization, and automated remediation.
 
-## 📹 Demo Video
+## 🏆 AWS Global Vibe: AI Coding Hackathon 2025
 
+This project was built using **Amazon Kiro IDE** for the AWS Global Vibe Hackathon.
+
+### 🛠️ Built with Amazon Kiro
+
+Cloud Ops Sentinel was developed entirely using **Amazon Kiro IDE**, leveraging its AI-powered coding capabilities:
+
+- **Spec-Driven Development** - Used Kiro's spec workflow to define requirements, design, and implementation tasks
+- **Agentic Code Generation** - Kiro's AI agent helped generate boilerplate, implement features, and debug issues
+- **Intelligent Code Completion** - AI-assisted coding for faster development
+- **Automated Testing** - Property-based tests generated with Kiro's assistance
+
+> 📸 See [Kiro Usage Screenshots](#kiro-usage-screenshots) below for proof of tool integration.
+
+## � DNemo Video
+## 📹 Demo Video
 [![Demo Video](https://img.shields.io/badge/YouTube-Demo-red?style=for-the-badge&logo=youtube)](https://youtu.be/HK8jU1KIRrU)
 
 **Watch the full demo:** https://youtu.be/HK8jU1KIRrU
@@ -295,10 +312,24 @@ Cloud Ops Sentinel is evolving from a hackathon demo into a production-ready Saa
 - Plugin Marketplace for custom integrations
 - Compliance Reports (ISO 27001, SOC2, GDPR)
 
+## 📸 Kiro Usage Screenshots
+
+Evidence of Amazon Kiro IDE usage during development:
+
+### AI-Assisted Development with Kiro
+
+| Screenshot | Description |
+|------------|-------------|
+| ![Kiro 1](screenshot/image.png) | Kiro AI chat assisting with MCP tools development |
+| ![Kiro 2](screenshot/image%20copy.png) | Agentic code generation and debugging |
+| ![Kiro 3](screenshot/Screenshot%20from%202025-11-30%2014-22-24.png) | Spec-driven development workflow |
+
+*Screenshots show actual development sessions using Amazon Kiro IDE.*
+
 ## 📝 License
 
 MIT License - See [LICENSE](LICENSE) for details.
 
 ---
 
-Built with ❤️ for the AI Hackathon
+Built with ❤️ using **Amazon Kiro IDE** for the AWS Global Vibe: AI Coding Hackathon 2025
