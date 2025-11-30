@@ -74,3 +74,4 @@ flagged/
 .gradio/
 .encryption_key
 cloud_ops_sentinel.db
+demo_narration.mp3
