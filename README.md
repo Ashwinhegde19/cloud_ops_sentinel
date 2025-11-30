@@ -9,7 +9,7 @@ app_file: app.py
 pinned: false
 license: mit
 tags:
-  - mcp-in-action-track-xx
+  - mcp-in-action-track-enterprise
   - agents
   - cloud-ops
   - devops
@@ -18,6 +18,13 @@ tags:
 # ☁️ Cloud Ops Sentinel
 
 **AI-Powered Cloud Operations Assistant** - Enterprise-grade infrastructure monitoring, anomaly detection, cost optimization, and automated remediation.
+
+## 📹 Demo Video
+
+[![Demo Video](https://img.shields.io/badge/YouTube-Demo-red?style=for-the-badge&logo=youtube)](https://youtu.be/HK8jU1KIRrU)
+
+**Watch the full demo:** https://youtu.be/HK8jU1KIRrU
+
 
 ![Cloud Ops Sentinel](https://img.shields.io/badge/Cloud%20Ops-Sentinel-6366f1?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.8+-3776ab?style=flat-square&logo=python)
