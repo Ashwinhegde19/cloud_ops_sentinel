@@ -63,28 +63,15 @@ tags:
 - 🏥 **Hygiene Score** - Single 0-100 score measuring overall infrastructure health with weighted factors
 - 📥 **PDF/Markdown Reports** - Downloadable reports with SambaNova-generated narratives
 
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Cloud Ops Sentinel                           │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │  Gradio 6   │  │ LangChain   │  │    MCP      │             │
-│  │     UI      │──│ Orchestrator│──│   Server    │             │
-│  └─────────────┘  └─────────────┘  └─────────────┘             │
-│         │                │                │                     │
-│  ┌──────┴────────────────┴────────────────┴──────┐             │
-│  │              Sponsor Integrations              │             │
-│  ├────────┬────────┬────────┬────────┬──────────┤             │
-│  │ Modal  │Hyper-  │ Blaxel │Samba-  │ Hugging  │             │
-│  │Compute │bolic   │  Alt   │Nova    │  Face    │             │
-│  │        │Vectors │Compute │  LLM   │  LLM     │             │
-│  └────────┴────────┴────────┴────────┴──────────┘             │
-└─────────────────────────────────────────────────────────────────┘
-```
-
 ## 🚀 Quick Start
+
+### Prerequisites
+
+| Requirement | Version | Check Command |
+|-------------|---------|---------------|
+| Python | 3.8+ | `python3 --version` |
+| pip | Latest | `pip --version` |
+| Git | Any | `git --version` |
 
 ### Option 1: One-Command Start (Recommended)
 
@@ -93,32 +80,76 @@ tags:
 git clone https://github.com/yourusername/cloud-ops-sentinel.git
 cd cloud-ops-sentinel
 
-# Run the start script
+# Linux/Mac
 chmod +x start.sh
 ./start.sh
+
+# Windows
+start.bat
 ```
 
 ### Option 2: Manual Setup
 
 ```bash
+# Clone and enter directory
+git clone https://github.com/yourusername/cloud-ops-sentinel.git
+cd cloud-ops-sentinel
+
 # Create virtual environment
 python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Activate virtual environment
+source venv/bin/activate        # Linux/Mac
+# venv\Scripts\activate         # Windows
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Copy environment file
+# Copy environment file (optional - works without API keys)
 cp .env.example .env
-# Edit .env with your API keys (optional - works without them)
 
-# Start the UI
-python app/ui_gradio.py
+# Start the application
+python app.py
+```
+
+### Option 3: Using uv (Fast Package Manager)
+
+```bash
+# Install uv if not installed
+pip install uv
+
+# Clone and setup
+git clone https://github.com/yourusername/cloud-ops-sentinel.git
+cd cloud-ops-sentinel
+
+# Create venv and install deps (much faster)
+uv venv venv
+source venv/bin/activate
+uv pip install -r requirements.txt
+
+# Run
+python app.py
 ```
 
 ### Access the Dashboard
 
 Open your browser to: **http://localhost:7860**
+
+### Running Tests
+
+```bash
+# Activate virtual environment first
+source venv/bin/activate
+
+# Run all tests
+pytest tests/ -v
+
+# Run with coverage
+pytest tests/ --cov=app --cov-report=html
+
+# Run property-based tests only
+pytest tests/ -v -k "property"
+```
 
 ## 🔧 Configuration
 
@@ -221,6 +252,48 @@ This project integrates with hackathon sponsors:
 - 🧠 **SambaNova** - Primary LLM for AI-powered reports
 - 🔗 **LangChain** - Workflow orchestration
 - 🔌 **MCP** - Model Context Protocol tools
+
+## ⚠️ Current Limitations
+
+We believe in transparency. Here's what Cloud Ops Sentinel can and cannot do today:
+
+| Limitation | Current State | Planned Solution |
+|------------|---------------|------------------|
+| **Simulated Infrastructure** | Uses synthetic data for demo purposes | Multi-cloud adapters (AWS, Azure, GCP) in Phase 1 |
+| **No Persistent Storage** | Data resets on restart | PostgreSQL integration for production |
+| **Single-User Mode** | No authentication or multi-tenancy | SSO + RBAC in Phase 6 |
+| **No Real Cost Data** | Cost forecasts are simulated | Cost Explorer API integration in Phase 2 |
+| **Limited Anomaly Detection** | Rule-based with LLM enhancement | ML-based detection with historical learning |
+| **No External Alerting** | Alerts only in UI | Slack/Teams/PagerDuty webhooks in Phase 5 |
+
+### What Works Well Today
+- ✅ Full MCP tool integration with 6 operational tools
+- ✅ LLM-powered natural language operations (Ops Chat)
+- ✅ Autonomous remediation loop with health verification
+- ✅ Infrastructure hygiene scoring with actionable suggestions
+- ✅ PDF/Markdown report generation with AI narratives
+- ✅ Graceful fallbacks when API keys are unavailable
+
+## 🗺️ Roadmap
+
+Cloud Ops Sentinel is evolving from a hackathon demo into a production-ready SaaS platform. See our full [ROADMAP.md](ROADMAP.md) for details.
+
+### Coming Soon
+
+| Phase | Timeline | Features |
+|-------|----------|----------|
+| **Multi-Cloud Discovery** | Weeks 1-2 | AWS, Azure, GCP, DigitalOcean, Vultr adapters |
+| **Cost Intelligence** | Weeks 3-4 | Real cost optimization with savings calculator |
+| **Policy-as-Code** | Weeks 5-6 | Compliance guardrails and automated auditing |
+| **Incident Management** | Weeks 7-8 | Full lifecycle + AI-powered postmortems |
+| **ChatOps** | Weeks 9-10 | Slack & Teams integration |
+| **Enterprise Polish** | Weeks 11-12 | SSO, RBAC, unified dashboard |
+
+### Future Vision
+- Cloud Drift Detection (Terraform/Pulumi state comparison)
+- Secret Scanner (API keys, tokens in logs/storage)
+- Plugin Marketplace for custom integrations
+- Compliance Reports (ISO 27001, SOC2, GDPR)
 
 ## 📝 License
 
