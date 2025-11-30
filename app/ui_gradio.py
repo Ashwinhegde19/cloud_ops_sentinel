@@ -1460,13 +1460,6 @@ def launch():
                 gr.HTML('<h2 style="color: #e2e8f0; margin: 0 0 8px 0;">Export Operations Report</h2>')
                 gr.HTML('<p style="color: #94a3b8; margin: 0 0 16px 0;">Download a comprehensive report for stakeholders</p>')
                 
-                with gr.Row():
-                    generate_preview_btn = gr.Button("👁️ Preview Report", variant="secondary", size="lg")
-                    download_md_btn = gr.Button("📄 Generate Download", variant="primary", size="lg")
-                
-                download_file = gr.File(label="Click filename below to download", interactive=False)
-                download_output = gr.Markdown(label="Report Preview")
-                
                 def create_download_file():
                     """Generate markdown file for download."""
                     content = generate_markdown_report()
@@ -1476,13 +1469,15 @@ def launch():
                         f.write(content)
                     return filepath
                 
+                with gr.Row():
+                    generate_preview_btn = gr.Button("👁️ Preview Report", variant="secondary", size="lg")
+                    download_btn = gr.DownloadButton("📄 Download Report", value=create_download_file, variant="primary", size="lg")
+                
+                download_output = gr.Markdown(label="Report Preview")
+                
                 generate_preview_btn.click(
                     fn=generate_markdown_report,
                     outputs=[download_output]
-                )
-                download_md_btn.click(
-                    fn=create_download_file,
-                    outputs=[download_file]
                 )
             
             # Tab 11: Settings (Admin) - only show when auth is enabled
