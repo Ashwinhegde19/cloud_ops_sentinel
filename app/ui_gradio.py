@@ -1460,28 +1460,29 @@ def launch():
                 gr.HTML('<h2 style="color: #e2e8f0; margin: 0 0 8px 0;">Export Operations Report</h2>')
                 gr.HTML('<p style="color: #94a3b8; margin: 0 0 16px 0;">Download a comprehensive report for stakeholders</p>')
                 
-                with gr.Row():
-                    generate_preview_btn = gr.Button("👁️ Preview Report", variant="secondary", size="lg")
-                    generate_file_btn = gr.Button("📄 Generate Report File", variant="primary", size="lg")
-                
-                download_file = gr.File(label="📥 Click the download arrow (↓) on the right to save")
+                generate_preview_btn = gr.Button("👁️ Preview Report", variant="secondary", size="lg")
                 download_output = gr.Markdown(label="Report Preview")
+                download_link = gr.HTML(value="")
                 
-                def create_report_file():
-                    """Generate markdown file for download."""
+                def create_report_with_link():
+                    """Generate markdown report and return download link."""
                     content = generate_markdown_report()
-                    filepath = "/tmp/cloud_ops_sentinel_report.md"
-                    with open(filepath, "w") as f:
-                        f.write(content)
-                    return filepath
+                    import base64
+                    b64 = base64.b64encode(content.encode()).decode()
+                    href = f'data:text/markdown;base64,{b64}'
+                    return f'''
+                    <a href="{href}" download="cloud_ops_sentinel_report.md" 
+                       style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+                              color: white; padding: 16px 32px; border-radius: 10px; text-decoration: none; 
+                              font-weight: 600; font-size: 16px; margin-top: 16px; cursor: pointer;
+                              box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);">
+                        📥 Click Here to Download Report
+                    </a>
+                    '''
                 
                 generate_preview_btn.click(
-                    fn=generate_markdown_report,
-                    outputs=[download_output]
-                )
-                generate_file_btn.click(
-                    fn=create_report_file,
-                    outputs=[download_file]
+                    fn=lambda: (generate_markdown_report(), create_report_with_link()),
+                    outputs=[download_output, download_link]
                 )
             
             # Tab 11: Settings (Admin) - only show when auth is enabled
