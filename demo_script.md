@@ -94,7 +94,7 @@
 
 **[Screenshot: Download Report tab]**
 
-> "Finally, Download Report. Preview your report or download it as a Markdown file for stakeholders and documentation."
+> "Finally, Download Report. Click Preview Report to see the full report, then click the green download button to save it as a Markdown file."
 
 ---
 

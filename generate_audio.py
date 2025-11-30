@@ -33,7 +33,7 @@ Hygiene Score. One number — zero to one hundred — measuring overall infrastr
 
 Auto-Remediation. This is autonomous mode. Toggle it on, and the system continuously monitors all services. When it detects a high or critical anomaly, it automatically restarts the service, verifies health, and logs the event. Right now our infrastructure is healthy, so no events yet. In production, this runs hands-free twenty-four seven.
 
-Finally, Download Report. Preview your report or download it as a Markdown file for stakeholders and documentation.
+Finally, Download Report. Click Preview Report to see the full report, then click the green download button to save it as a Markdown file.
 
 Under the hood, Cloud Ops Sentinel integrates with six hackathon sponsors: Modal for compute, Hyperbolic for embeddings, Blaxel as alternative backend, SambaNova for LLM reports, HuggingFace for the UI, and LangChain for orchestration.
 
