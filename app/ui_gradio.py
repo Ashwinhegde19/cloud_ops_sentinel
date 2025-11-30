@@ -1460,24 +1460,28 @@ def launch():
                 gr.HTML('<h2 style="color: #e2e8f0; margin: 0 0 8px 0;">Export Operations Report</h2>')
                 gr.HTML('<p style="color: #94a3b8; margin: 0 0 16px 0;">Download a comprehensive report for stakeholders</p>')
                 
-                def create_download_file():
+                with gr.Row():
+                    generate_preview_btn = gr.Button("👁️ Preview Report", variant="secondary", size="lg")
+                    generate_file_btn = gr.Button("📄 Generate Report File", variant="primary", size="lg")
+                
+                download_file = gr.File(label="📥 Click the download arrow (↓) on the right to save")
+                download_output = gr.Markdown(label="Report Preview")
+                
+                def create_report_file():
                     """Generate markdown file for download."""
                     content = generate_markdown_report()
-                    filename = "cloud_ops_sentinel_report.md"
-                    filepath = f"/tmp/{filename}"
+                    filepath = "/tmp/cloud_ops_sentinel_report.md"
                     with open(filepath, "w") as f:
                         f.write(content)
                     return filepath
                 
-                with gr.Row():
-                    generate_preview_btn = gr.Button("👁️ Preview Report", variant="secondary", size="lg")
-                    download_btn = gr.DownloadButton("📄 Download Report", value=create_download_file, variant="primary", size="lg")
-                
-                download_output = gr.Markdown(label="Report Preview")
-                
                 generate_preview_btn.click(
                     fn=generate_markdown_report,
                     outputs=[download_output]
+                )
+                generate_file_btn.click(
+                    fn=create_report_file,
+                    outputs=[download_file]
                 )
             
             # Tab 11: Settings (Admin) - only show when auth is enabled
