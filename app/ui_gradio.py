@@ -1603,9 +1603,9 @@ if __name__ == "__main__":
         gr.close_all()
     demo = launch()
     # Enable Gradio's built-in auth for local development
-    # Default credentials: admin / admin123
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,
-        auth=("admin", "admin123")
+        auth=("admin", "admin123"),
+        auth_message="Default credentials: admin / admin123"
     )

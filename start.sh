@@ -56,5 +56,6 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Start the Gradio UI
-python app/ui_gradio.py
+# Start the Gradio UI with hot reload
+# Changes to Python files will automatically reload the app
+gradio app/ui_gradio.py
