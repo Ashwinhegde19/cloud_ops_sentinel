@@ -1462,19 +1462,19 @@ def launch():
                 
                 with gr.Row():
                     generate_preview_btn = gr.Button("👁️ Preview Report", variant="secondary", size="lg")
-                    download_md_btn = gr.Button("📄 Download Markdown", variant="primary", size="lg")
+                    download_md_btn = gr.Button("📄 Generate Download", variant="primary", size="lg")
                 
-                download_file = gr.File(label="Download", visible=False)
+                download_file = gr.File(label="Click filename below to download", interactive=False)
                 download_output = gr.Markdown(label="Report Preview")
                 
                 def create_download_file():
                     """Generate markdown file for download."""
                     content = generate_markdown_report()
-                    filename = f"cloud_ops_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+                    filename = "cloud_ops_sentinel_report.md"
                     filepath = f"/tmp/{filename}"
                     with open(filepath, "w") as f:
                         f.write(content)
-                    return gr.File(value=filepath, visible=True)
+                    return filepath
                 
                 generate_preview_btn.click(
                     fn=generate_markdown_report,
