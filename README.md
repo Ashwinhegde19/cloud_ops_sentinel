@@ -1,3 +1,20 @@
+---
+title: Cloud Ops Sentinel
+emoji: 🛡️
+colorFrom: indigo
+colorTo: purple
+sdk: gradio
+sdk_version: "5.31.0"
+app_file: app.py
+pinned: false
+license: mit
+tags:
+  - mcp-in-action-track-xx
+  - agents
+  - cloud-ops
+  - devops
+---
+
 # ☁️ Cloud Ops Sentinel
 
 **AI-Powered Cloud Operations Assistant** - Enterprise-grade infrastructure monitoring, anomaly detection, cost optimization, and automated remediation.
