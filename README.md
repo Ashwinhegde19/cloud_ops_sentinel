@@ -34,7 +34,7 @@ tags:
 ## 👥 Team
 
 - **Ashwin Hegde** - [GitHub](https://github.com/Ashwinhegde19) | [HuggingFace](https://huggingface.co/ashwinredmi)
-- **Akshay Joshi** - [GitHub](https://github.com/doozie-akshay)
+- **Akshay Joshi** - [GitHub](https://github.com/doozie-akshay) | [HuggingFace](https://huggingface.co/akshayjoshi999)
 
 > 💪 **Note:** We didn't receive the ElevenLabs credits, but we still managed to create a professional demo video with AI-generated narration!
 
