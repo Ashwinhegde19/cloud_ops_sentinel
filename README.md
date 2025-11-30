@@ -36,7 +36,7 @@ tags:
 - **Ashwin Hegde** - [GitHub](https://github.com/Ashwinhegde19) | [HuggingFace](https://huggingface.co/ashwinredmi)
 - **Akshay Joshi** - [GitHub](https://github.com/doozie-akshay) | [HuggingFace](https://huggingface.co/akshayjoshi999)
 
-> 💪 **Note:** We didn't receive the ElevenLabs credits, but we still managed to create a professional demo video with AI-generated narration!
+> 💪 **Note:** Although ElevenLabs credits were not available to us, we still produced a polished demo video with AI-generated narration.
 
 ![Cloud Ops Sentinel](https://img.shields.io/badge/Cloud%20Ops-Sentinel-6366f1?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.8+-3776ab?style=flat-square&logo=python)
